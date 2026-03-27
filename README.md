@@ -1,6 +1,6 @@
 # unimodpy
 
-[![CI](https://github.com/pgarrett-scripps/unimodpy/actions/workflows/ci.yml/badge.svg)](https://github.com/pgarrett-scripps/unimodpy/actions/workflows/ci.yml)
+[![CI](https://github.com/tacular-omics/unimodpy/actions/workflows/ci.yml/badge.svg)](https://github.com/tacular-omics/unimodpy/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/unimodpy)](https://pypi.org/project/unimodpy/)
 [![Python](https://img.shields.io/pypi/pyversions/unimodpy)](https://pypi.org/project/unimodpy/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -141,8 +141,8 @@ just check     # lint + type check + test
 
 | Package | Description |
 |---------|-------------|
-| [uniprotptmpy](https://github.com/pgarrett-scripps/uniprotptmpy) | Parse and query the UniProt PTM controlled vocabulary |
-| [psimodpy](https://github.com/pgarrett-scripps/psimodpy) | Parse and query the PSI-MOD protein modification ontology |
+| [uniprotptmpy](https://github.com/tacular-omics/uniprotptmpy) | Parse and query the UniProt PTM controlled vocabulary |
+| [psimodpy](https://github.com/tacular-omics/psimodpy) | Parse and query the PSI-MOD protein modification ontology |
 
 ## License
 
