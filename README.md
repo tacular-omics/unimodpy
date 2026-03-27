@@ -1,13 +1,15 @@
 # unimodpy
 
-[![PyPI version](https://img.shields.io/pypi/v/unimodpy)](https://pypi.org/project/unimodpy/)
 [![CI](https://github.com/pgarrett-scripps/unimodpy/actions/workflows/ci.yml/badge.svg)](https://github.com/pgarrett-scripps/unimodpy/actions/workflows/ci.yml)
-[![Python 3.12+](https://img.shields.io/pypi/pyversions/unimodpy)](https://pypi.org/project/unimodpy/)
+[![PyPI version](https://img.shields.io/pypi/v/unimodpy)](https://pypi.org/project/unimodpy/)
+[![Python](https://img.shields.io/pypi/pyversions/unimodpy)](https://pypi.org/project/unimodpy/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A Python library for parsing and querying the [UNIMOD](http://www.unimod.org/) mass spectrometry modifications database.
+Python library for parsing and querying the [UNIMOD](http://www.unimod.org/) mass spectrometry modifications database.
 
-UNIMOD is the community standard for protein modification definitions used in proteomics search engines, spectral libraries, and data formats such as mzML, mzIdentML, and ProForma. `unimodpy` ships with a bundled copy of the OBO file so it works out of the box — no network access required.
+- Zero dependencies
+- Bundled UNIMOD data (1,552 entries) — works offline out of the box
+- Typed, immutable data models (`py.typed` / PEP 561)
 
 ## Installation
 
@@ -23,7 +25,7 @@ uv add unimodpy
 
 Requires Python 3.12+. No third-party dependencies.
 
-## Quick start
+## Quick Start
 
 ```python
 import unimodpy
@@ -52,22 +54,18 @@ print(acetyl)
 #     ...
 ```
 
-## Refreshing from unimod.org
-
-To download the latest OBO and use it immediately:
+### Refreshing from unimod.org
 
 ```python
+# Download the latest OBO and use it immediately
 db = unimodpy.load(refresh=True)
+
+# Or just download the file
+path = unimodpy.download()                        # ~/.cache/unimodpy/UNIMOD.obo
+path = unimodpy.download("/my/dir/UNIMOD.obo")    # custom destination
 ```
 
-To just download the file (saved to `~/.cache/unimodpy/UNIMOD.obo` by default):
-
-```python
-path = unimodpy.download()
-path = unimodpy.download("/my/dir/UNIMOD.obo")  # custom destination
-```
-
-## Loading a custom file
+### Loading a Custom File
 
 ```python
 db = unimodpy.load("/path/to/UNIMOD.obo")
@@ -75,7 +73,7 @@ db = unimodpy.load("/path/to/UNIMOD.obo")
 db = unimodpy.parse_obo("/path/to/UNIMOD.obo")
 ```
 
-## Working with entries
+### Working with Entries
 
 Each `UnimodEntry` is a frozen dataclass:
 
@@ -101,8 +99,7 @@ for spec in entry.specificities:
 
 ### Enums
 
-Site, position, and classification values are typed `StrEnum` members, so they
-compare equal to their string values and work naturally in `match` statements:
+Site, position, and classification values are typed `StrEnum` members:
 
 ```python
 from unimodpy import Site, Position, Classification
@@ -114,11 +111,11 @@ ptm_sites = [
 ]
 ```
 
-## API reference
+## API Overview
 
 | Symbol | Description |
 |--------|-------------|
-| `load(source=None, *, refresh=False)` | Load the database. No args → bundled file. `refresh=True` → download first. |
+| `load(source=None, *, refresh=False)` | Load the database. No args -> bundled file. `refresh=True` -> download first. |
 | `download(dest=None)` | Download latest OBO from unimod.org; returns `Path`. |
 | `parse_obo(path)` | Low-level: parse any OBO file at `path`. |
 | `UnimodDatabase` | Iterable collection with `get_by_id`, `get_by_name`, `search`, `__getitem__`. |
@@ -132,9 +129,21 @@ ptm_sites = [
 ## Development
 
 ```bash
-just install   # create venv and install dev dependencies
-just test      # run tests
+just install   # install dependencies with uv
 just lint      # ruff check
 just format    # ruff format
-just check     # type check with ty
+just ty        # ty type check
+just test      # pytest
+just check     # lint + type check + test
 ```
+
+## Related Projects
+
+| Package | Description |
+|---------|-------------|
+| [uniprotptmpy](https://github.com/pgarrett-scripps/uniprotptmpy) | Parse and query the UniProt PTM controlled vocabulary |
+| [psimodpy](https://github.com/pgarrett-scripps/psimodpy) | Parse and query the PSI-MOD protein modification ontology |
+
+## License
+
+[MIT](LICENSE)
