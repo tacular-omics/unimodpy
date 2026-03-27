@@ -5,7 +5,7 @@ description = "Python library for parsing and querying the UNIMOD mass spectrome
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
-license = { text = "MIT" }
+license = "MIT"
 authors = [
     { name = "Patrick Garrett", email = "pgarrett@scripps.edu" }
 ]
@@ -14,7 +14,7 @@ maintainers = [
 ]
 keywords = ["unimod", "proteomics", "mass spectrometry", "modifications", "OBO", "bioinformatics"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -29,7 +29,7 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/pgarrett-scripps/unimodpy"
 Repository = "https://github.com/pgarrett-scripps/unimodpy"
-"Bug Tracker" = "https://github.com/pgarrett-scripps/unimodpy/issues"
+Issues = "https://github.com/pgarrett-scripps/unimodpy/issues"
 Changelog = "https://github.com/pgarrett-scripps/unimodpy/blob/main/HISTORY.md"
 
 [build-system]
@@ -61,4 +61,7 @@ select = [
     "B",   # flake8-bugbear
     "UP",  # pyupgrade
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
