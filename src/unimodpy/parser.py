@@ -142,9 +142,7 @@ def _build_entry(lines: list[str]) -> UnimodEntry:
         username_of_poster=scalars.get("username_of_poster"),
         group_of_poster=scalars.get("group_of_poster"),
         date_time_posted=(
-            datetime.datetime.strptime(scalars["date_time_posted"], _DT_FMT)
-            if "date_time_posted" in scalars
-            else None
+            datetime.datetime.strptime(scalars["date_time_posted"], _DT_FMT) if "date_time_posted" in scalars else None
         ),
         date_time_modified=(
             datetime.datetime.strptime(scalars["date_time_modified"], _DT_FMT)

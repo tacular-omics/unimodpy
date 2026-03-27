@@ -1,5 +1,10 @@
 # unimodpy
 
+[![PyPI version](https://img.shields.io/pypi/v/unimodpy)](https://pypi.org/project/unimodpy/)
+[![CI](https://github.com/pgarrett-scripps/unimodpy/actions/workflows/ci.yml/badge.svg)](https://github.com/pgarrett-scripps/unimodpy/actions/workflows/ci.yml)
+[![Python 3.12+](https://img.shields.io/pypi/pyversions/unimodpy)](https://pypi.org/project/unimodpy/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A Python library for parsing and querying the [UNIMOD](http://www.unimod.org/) mass spectrometry modifications database.
 
 UNIMOD is the community standard for protein modification definitions used in proteomics search engines, spectral libraries, and data formats such as mzML, mzIdentML, and ProForma. `unimodpy` ships with a bundled copy of the OBO file so it works out of the box — no network access required.
@@ -8,6 +13,12 @@ UNIMOD is the community standard for protein modification definitions used in pr
 
 ```bash
 pip install unimodpy
+```
+
+Or with [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv add unimodpy
 ```
 
 Requires Python 3.12+. No third-party dependencies.
