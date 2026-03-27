@@ -1,6 +1,6 @@
 [project]
 name = "unimodpy"
-version = "0.1.0"
+version = "0.1.1"
 description = "Python library for parsing and querying the UNIMOD mass spectrometry modifications database."
 readme = "README.md"
 requires-python = ">=3.12"
