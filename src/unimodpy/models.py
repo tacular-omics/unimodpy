@@ -82,10 +82,7 @@ class NeutralLoss:
     composition: str
 
     def __repr__(self) -> str:
-        return (
-            f"NeutralLoss(key={self.key}, mono_mass={self.mono_mass}, "
-            f"composition={self.composition!r})"
-        )
+        return f"NeutralLoss(key={self.key}, mono_mass={self.mono_mass}, composition={self.composition!r})"
 
     def __str__(self) -> str:
         return f"NL[{self.key}] {self.mono_mass:+.6f} Da  {self.composition}"
@@ -191,10 +188,7 @@ class UnimodEntry:
         if self.proforma_formula:
             lines.append(f"  Formula  : {self.proforma_formula}")
         if self.delta_mono_mass is not None:
-            lines.append(
-                f"  Mass     : {self.delta_mono_mass:+.6f} Da (mono)"
-                f"  {self.delta_avge_mass:+.4f} Da (avg)"
-            )
+            lines.append(f"  Mass     : {self.delta_mono_mass:+.6f} Da (mono)  {self.delta_avge_mass:+.4f} Da (avg)")
         if self.specificities:
             lines.append(f"  Sites ({len(self.specificities)}):")
             for spec in self.specificities:

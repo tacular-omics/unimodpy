@@ -1,3 +1,5 @@
+"""Download the latest UNIMOD OBO file from unimod.org."""
+
 import urllib.request
 from pathlib import Path
 

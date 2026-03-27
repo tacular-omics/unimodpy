@@ -53,9 +53,7 @@ class UnimodDatabase:
         return [
             entry
             for entry in self._entries
-            if q in entry.name.lower()
-            or q in entry.definition.lower()
-            or any(q in s.lower() for s in entry.synonyms)
+            if q in entry.name.lower() or q in entry.definition.lower() or any(q in s.lower() for s in entry.synonyms)
         ]
 
     def __getitem__(self, id: int | str) -> UnimodEntry:
