@@ -1,5 +1,4 @@
 include HISTORY.md
-include src/unimodpy/data/UNIMOD.obo
 include README.md
 include .gitignore
 
