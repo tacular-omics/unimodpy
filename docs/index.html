@@ -221,9 +221,11 @@ function detail(e){
 <td><span class="tag ${CC[s.classification]||'tb0'}">${x(s.classification)}</span></td>
 </tr>`).join('');
   return `<div class="dg">
-<div><div class="dl">Definition</div><div class="dv">${x(e.definition||'—')}</div></div>
-<div><div class="dl">Synonyms</div><div class="dv">${syns}</div></div>
+<div style="grid-column:1/-1"><div class="dl">Definition</div><div class="dv">${x(e.definition||'—')}</div></div>
+<div><div class="dl">Monoisotopic Mass</div><div class="dv mono">${e.delta_mono_mass!=null?e.delta_mono_mass.toFixed(6)+' Da':'—'}</div></div>
 <div><div class="dl">Average Mass</div><div class="dv mono">${e.delta_avge_mass!=null?e.delta_avge_mass.toFixed(4)+' Da':'—'}</div></div>
+${e.proforma_formula?`<div><div class="dl">Formula</div><div class="dv mono"><code>${x(e.proforma_formula)}</code></div></div>`:''}
+<div><div class="dl">Synonyms</div><div class="dv">${syns}</div></div>
 ${e.comment?`<div><div class="dl">Comment</div><div class="dv">${x(e.comment)}</div></div>`:''}
 ${e.approved!=null?`<div><div class="dl">Approved</div><div class="dv">${e.approved?'Yes':'No'}</div></div>`:''}
 </div>${e.specificities.length?`<div style="margin-top:.75rem"><div class="dl">Specificities (${e.specificities.length})</div>
