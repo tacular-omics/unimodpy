@@ -11,6 +11,10 @@ Python library for parsing and querying the [UNIMOD](http://www.unimod.org/) mas
 - Bundled UNIMOD data (1,552 entries) — works offline out of the box
 - Typed, immutable data models (`py.typed` / PEP 561)
 
+
+## Online Viewer
+#### [Click Me!](https://tacular-omics.github.io/unimodpy/)
+
 ## Installation
 
 ```bash
