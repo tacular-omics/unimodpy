@@ -40,15 +40,11 @@ thead{background:#f9fafb}
 th{padding:.65rem .9rem;text-align:left;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb;white-space:nowrap;user-select:none}
 th[data-col]{cursor:pointer}
 th[data-col]:hover{background:#f0f4f8}
-.si::after{content:" ↕";color:#d1d5db}
+.si::after{content:" ⇕";color:#d1d5db}
 .sa::after{content:" ↑";color:#3b82f6}
 .sd::after{content:" ↓";color:#3b82f6}
 td{padding:.55rem .9rem;border-bottom:1px solid #f3f4f6;vertical-align:middle}
 .dr:hover td{background:#fafafa;cursor:pointer}
-.dr.exp td{background:#eff6ff}
-.dr.exp td:first-child{border-left:3px solid #3b82f6;padding-left:.65rem}
-.dtr td{padding:0}
-.di{padding:.9rem 1.25rem;background:#f8fafc;border-bottom:1px solid #e5e7eb}
 .ic{font-family:ui-monospace,monospace;color:#2563eb;font-weight:600;font-size:.82rem;white-space:nowrap}
 .nc{font-weight:500}
 .fc{font-family:ui-monospace,monospace;color:#7c3aed;font-size:.82rem}
@@ -69,6 +65,12 @@ td{padding:.55rem .9rem;border-bottom:1px solid #f3f4f6;vertical-align:middle}
 .st td{padding:.3rem .65rem;border-bottom:1px solid #f1f5f9}
 .st tr:last-child td{border-bottom:none}
 .nr{text-align:center;padding:2.5rem;color:#9ca3af}
+.dv-back{display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .85rem;border:1px solid #d1d5db;border-radius:.5rem;background:#fff;cursor:pointer;font-size:.84rem;color:#374151;margin-bottom:.75rem;font-family:inherit}
+.dv-back:hover{background:#f9fafb;border-color:#9ca3af}
+.dv-hd{background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:1rem 1.25rem;margin-bottom:.75rem}
+.dv-id{font-family:ui-monospace,monospace;color:#2563eb;font-weight:600;font-size:.9rem}
+.dv-nm{font-size:1.3rem;font-weight:700;margin-top:.25rem;color:#1a202c}
+.dv-bd{background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:1rem 1.25rem}
 @media(max-width:640px){header{padding:1rem}.hi{flex-direction:column}main{padding:0 .5rem}}
 </style>
 </head>
@@ -91,7 +93,7 @@ td{padding:.55rem .9rem;border-bottom:1px solid #f3f4f6;vertical-align:middle}
     </nav>
   </div>
 </header>
-<main>
+<main id="lvw">
   <div class="tb">
     <input type="search" id="q" placeholder="Search name, ID, formula, synonym…" autocomplete="off">
     <select id="fc"><option value="">All classifications</option></select>
@@ -121,6 +123,16 @@ td{padding:.55rem .9rem;border-bottom:1px solid #f3f4f6;vertical-align:middle}
     </table>
   </div>
 </main>
+<div id="dvp" style="display:none">
+  <div style="max-width:1300px;margin:1rem auto;padding:0 1rem">
+    <button class="dv-back" id="dvb">← Back to list</button>
+    <div class="dv-hd">
+      <div class="dv-id" id="dvi"></div>
+      <div class="dv-nm" id="dvt"></div>
+    </div>
+    <div class="dv-bd" id="dvc"></div>
+  </div>
+</div>
 <script>
 'use strict';
 let ALL=[],filtered=[],sortCol='id',sortDir=1,page=0,perPage=50;
@@ -139,6 +151,8 @@ async function init(){
   for(const e of ALL)for(const s of e.specificities){cls.add(s.classification);sites.add(s.site);pos.add(s.position);}
   fill('fc',[...cls].sort());fill('fs',[...sites].sort());fill('fp',[...pos].sort());
   update();
+  const qid=new URLSearchParams(location.search).get('id');
+  if(qid){const e=ALL.find(e=>String(e.id)===qid);if(e)showDetail(e);}
 }
 function fill(id,vals){const s=document.getElementById(id);vals.forEach(v=>{const o=document.createElement('option');o.value=o.textContent=v;s.appendChild(o);});}
 function update(){page=0;applyFilters();applySort();render();}
@@ -175,19 +189,28 @@ function render(){
 <td class="mc">${e.delta_mono_mass!=null?e.delta_mono_mass.toFixed(6):'<span style="color:#d1d5db">—</span>'}</td>
 <td><div class="tags">${sites.map(s=>`<span class="tag tb0">${x(s)}</span>`).join('')||'<span style="color:#d1d5db">—</span>'}</div></td>
 <td><div class="tags">${cls.map(c=>`<span class="tag ${CC[c]||'tb0'}">${x(c)}</span>`).join('')||'<span style="color:#d1d5db">—</span>'}</div></td>`;
-    tr.addEventListener('click',()=>toggle(tr,e));
+    tr.addEventListener('click',()=>openDetail(e));
     tbody.appendChild(tr);
   }
   updateBar();
 }
-function toggle(tr,e){
-  const nx=tr.nextElementSibling;
-  if(nx&&nx.classList.contains('dtr')){nx.remove();tr.classList.remove('exp');return;}
-  document.querySelectorAll('.dr.exp').forEach(r=>{r.classList.remove('exp');const n=r.nextElementSibling;if(n&&n.classList.contains('dtr'))n.remove();});
-  tr.classList.add('exp');
-  const d=document.createElement('tr');d.className='dtr';
-  d.innerHTML=`<td colspan="6"><div class="di">${detail(e)}</div></td>`;
-  tr.after(d);
+function openDetail(e){
+  history.pushState({id:e.id},'','?id='+encodeURIComponent(e.id));
+  showDetail(e);
+}
+function showDetail(e){
+  document.getElementById('lvw').style.display='none';
+  document.getElementById('dvp').style.display='block';
+  document.getElementById('dvi').textContent='UNIMOD:'+e.id;
+  document.getElementById('dvt').textContent=e.name;
+  document.getElementById('dvc').innerHTML=detail(e);
+  document.title=e.name+' — unimodpy';
+}
+function closeDetail(){
+  history.pushState(null,'',location.pathname);
+  document.getElementById('dvp').style.display='none';
+  document.getElementById('lvw').style.display='';
+  document.title='UNIMOD Browser — unimodpy';
 }
 function detail(e){
   const syns=(e.synonyms||[]).length?e.synonyms.map(x).join(', '):'—';
@@ -205,7 +228,8 @@ ${e.comment?`<div><div class="dl">Comment</div><div class="dv">${x(e.comment)}</
 ${e.approved!=null?`<div><div class="dl">Approved</div><div class="dv">${e.approved?'Yes':'No'}</div></div>`:''}
 </div>${e.specificities.length?`<div style="margin-top:.75rem"><div class="dl">Specificities (${e.specificities.length})</div>
 <table class="st"><thead><tr><th>#</th><th>Site</th><th>Position</th><th>Classification</th></tr></thead>
-<tbody>${specRows}</tbody></table></div>`:''}`;}
+<tbody>${specRows}</tbody></table></div>`:''}`;
+}
 function updateBar(){
   const t=filtered.length,tp=perPage?Math.ceil(t/perPage):1;
   const s=t?page*perPage+1:0,e2=perPage?Math.min((page+1)*perPage,t):t;
@@ -218,6 +242,14 @@ function updateBar(){
   });
 }
 function x(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+document.getElementById('dvb').addEventListener('click',closeDetail);
+window.addEventListener('popstate',()=>{
+  const qid=new URLSearchParams(location.search).get('id');
+  if(qid){const e=ALL.find(e=>String(e.id)===qid);if(e){showDetail(e);return;}}
+  document.getElementById('dvp').style.display='none';
+  document.getElementById('lvw').style.display='';
+  document.title='UNIMOD Browser — unimodpy';
+});
 let dt;
 document.getElementById('q').addEventListener('input',()=>{clearTimeout(dt);dt=setTimeout(update,200);});
 ['fc','fs','fp'].forEach(id=>document.getElementById(id).addEventListener('change',update));
