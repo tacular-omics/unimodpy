@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
+from pathlib import Path
 
 from unimodpy.models import UnimodEntry
 
@@ -14,10 +15,11 @@ class UnimodDatabase:
     or case-insensitive name.
     """
 
-    def __init__(self, entries: Iterable[UnimodEntry]) -> None:
+    def __init__(self, entries: Iterable[UnimodEntry], *, header_lines: tuple[str, ...] = ()) -> None:
         self._entries: list[UnimodEntry] = []
         self._by_id: dict[int, UnimodEntry] = {}
         self._by_name_lower: dict[str, UnimodEntry] = {}
+        self.header_lines: tuple[str, ...] = header_lines
 
         for entry in entries:
             self._entries.append(entry)
@@ -69,3 +71,15 @@ class UnimodDatabase:
 
     def __iter__(self) -> Iterator[UnimodEntry]:
         return iter(self._entries)
+
+    def write_tsv(self, path: Path | str, *, delimiter: str = "\t") -> Path:
+        """Serialize all entries to a tab-separated file. Pass ``delimiter=','`` for CSV."""
+        from unimodpy._tabular import write_tsv
+
+        return write_tsv(self._entries, path, delimiter=delimiter)
+
+    def write_obo(self, path: Path | str) -> Path:
+        """Serialize all entries to UNIMOD OBO format."""
+        from unimodpy._obo_writer import write_obo
+
+        return write_obo(self._entries, path, header_lines=self.header_lines)
