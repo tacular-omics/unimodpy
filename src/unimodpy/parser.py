@@ -195,6 +195,8 @@ def parse_obo(path: Path | str) -> UnimodDatabase:
     if in_term and current_lines:
         entries.append(_build_entry(current_lines))
 
+    while header_lines and header_lines[-1] == "":
+        header_lines.pop()
     return UnimodDatabase(entries, header_lines=tuple(header_lines))
 
 
