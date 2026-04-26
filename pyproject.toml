@@ -26,6 +26,13 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+[project.optional-dependencies]
+server = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "mcp>=1.2",
+]
+
 [project.urls]
 Homepage = "https://github.com/tacular-omics/unimodpy"
 Repository = "https://github.com/tacular-omics/unimodpy"
@@ -65,4 +72,3 @@ select = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-
