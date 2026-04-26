@@ -12,7 +12,7 @@ from unimodpy.models import Classification, NeutralLoss, Position, Site, Specifi
 
 # Module-level compiled regexes — avoids recompilation on every entry.
 _XREF_RE = re.compile(r'^xref:\s+(\S+)\s+"(.*)"$')
-_DEF_RE = re.compile(r'^def:\s+"(.*)"\s+\[.*\]$')
+_DEF_RE = re.compile(r'^def:\s+"(.*)"\s+\[([^\]]*)\]$')
 _SYN_RE = re.compile(r'^synonym:\s+"(.*)"\s+\w+\s+\[\]$')
 _SPEC_RE = re.compile(r"^spec_(\d+)_(group|hidden|site|position|classification|misc_notes)$")
 _NL_RE = re.compile(r"^spec_(\d+)_neutral_loss_(\d+)_(mono_mass|avge_mass|flag|composition)$")
@@ -48,6 +48,8 @@ def _build_entry(lines: list[str]) -> UnimodEntry:
     # nls[spec_num][nl_key][field] = value
     nls: dict[int, dict[int, dict[str, str]]] = {}
 
+    definition_ref: str = "UNIMOD:0"
+
     for line in lines:
         if line.startswith("id:"):
             raw = line[3:].strip()
@@ -56,7 +58,11 @@ def _build_entry(lines: list[str]) -> UnimodEntry:
             name = line[5:].strip()
         elif line.startswith("def:"):
             m = _DEF_RE.match(line)
-            definition = m.group(1) if m else line[4:].strip()
+            if m:
+                definition = m.group(1)
+                definition_ref = m.group(2) or "UNIMOD:0"
+            else:
+                definition = line[4:].strip()
         elif line.startswith("synonym:"):
             m = _SYN_RE.match(line)
             if m:
@@ -134,6 +140,7 @@ def _build_entry(lines: list[str]) -> UnimodEntry:
         name=name,
         definition=definition or "",
         synonyms=tuple(synonyms),
+        definition_ref=definition_ref,
         comment=comment,
         record_id=int(scalars["record_id"]) if "record_id" in scalars else None,
         delta_mono_mass=float(scalars["delta_mono_mass"]) if "delta_mono_mass" in scalars else None,
@@ -163,14 +170,17 @@ def parse_obo(path: Path | str) -> UnimodDatabase:
     """
     path = Path(path)
     entries: list[UnimodEntry] = []
+    header_lines: list[str] = []
     current_lines: list[str] = []
     in_term = False
+    past_header = False
 
     with path.open(encoding="utf-8") as fh:
         for raw_line in fh:
             line = raw_line.rstrip("\n")
             if line == "[Term]":
                 in_term = True
+                past_header = True
                 current_lines = []
             elif in_term:
                 if line == "":
@@ -178,12 +188,16 @@ def parse_obo(path: Path | str) -> UnimodDatabase:
                     in_term = False
                 else:
                     current_lines.append(line)
+            elif not past_header:
+                header_lines.append(line)
 
     # Flush final entry when file ends without a trailing blank line
     if in_term and current_lines:
         entries.append(_build_entry(current_lines))
 
-    return UnimodDatabase(entries)
+    while header_lines and header_lines[-1] == "":
+        header_lines.pop()
+    return UnimodDatabase(entries, header_lines=tuple(header_lines))
 
 
 def load(source: Path | str | None = None, *, refresh: bool = False) -> UnimodDatabase:

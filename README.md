@@ -10,6 +10,7 @@ Python library for parsing and querying the [UNIMOD](http://www.unimod.org/) mas
 - Zero dependencies
 - Bundled UNIMOD data (1,552 entries) — works offline out of the box
 - Typed, immutable data models (`py.typed` / PEP 561)
+- TSV/CSV export and round-trip OBO writer
 
 
 ## Online Viewer
@@ -115,6 +116,37 @@ ptm_sites = [
 ]
 ```
 
+### Exporting to TSV/CSV
+
+```python
+# Write all entries to a tab-separated file
+db.write_tsv("unimod.tsv")
+
+# Or CSV
+db.write_tsv("unimod.csv", delimiter=",")
+
+# Standalone function
+from unimodpy import write_tsv
+write_tsv(db, "unimod.tsv")
+```
+
+The TSV includes one row per entry. Specificities are serialized as a compact
+`site:position:classification` summary (e.g. `K:Anywhere:Post-translational`).
+
+### Writing back to OBO format
+
+```python
+# Round-trip: write entries back to UNIMOD OBO format
+db.write_obo("out/UNIMOD.obo")
+
+# Re-parse — identical entry count and field values (including citations)
+db2 = unimodpy.parse_obo("out/UNIMOD.obo")
+
+# Standalone function; pass the original header lines for a faithful round-trip
+from unimodpy import write_obo
+write_obo(db, "out/UNIMOD.obo", header_lines=db.header_lines)
+```
+
 ## API Overview
 
 | Symbol | Description |
@@ -122,8 +154,10 @@ ptm_sites = [
 | `load(source=None, *, refresh=False)` | Load the database. No args -> bundled file. `refresh=True` -> download first. |
 | `download(dest=None)` | Download latest OBO from unimod.org; returns `Path`. |
 | `parse_obo(path)` | Low-level: parse any OBO file at `path`. |
-| `UnimodDatabase` | Iterable collection with `get_by_id`, `get_by_name`, `search`, `__getitem__`. |
-| `UnimodEntry` | Frozen dataclass for one modification term. |
+| `write_tsv(entries, path, *, delimiter)` | Write entries to a TSV (or CSV) file. |
+| `write_obo(entries, path, *, header_lines)` | Write entries back to UNIMOD OBO format. |
+| `UnimodDatabase` | Iterable collection with `get_by_id`, `get_by_name`, `search`, `write_tsv()`, `write_obo()`, `__getitem__`. Also exposes `header_lines`. |
+| `UnimodEntry` | Frozen dataclass for one modification term. Includes `definition_ref`. |
 | `Specificity` | Frozen dataclass for one site/position rule. |
 | `NeutralLoss` | Frozen dataclass for one neutral loss. |
 | `Site` | `StrEnum` of amino acid residues and termini. |

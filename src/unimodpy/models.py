@@ -159,6 +159,7 @@ class UnimodEntry:
     name: str
     definition: str
     synonyms: tuple[str, ...]
+    definition_ref: str = "UNIMOD:0"
     comment: str | None = None
     record_id: int | None = None
     delta_mono_mass: float | None = None
