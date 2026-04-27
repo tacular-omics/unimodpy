@@ -12,7 +12,14 @@ from mcp.server.transport_security import TransportSecuritySettings
 
 import unimodpy
 from unimodpy.server.dashboard import dashboard_entries
-from unimodpy.server.schemas import serialize_entry
+from unimodpy.server.models import (
+    EntryListResponse,
+    SearchResponse,
+    UnimodEntry,
+    UnimodSummary,
+    to_unimod_entry,
+    to_unimod_summary,
+)
 
 _db = unimodpy.load()
 _PACKAGE = "unimodpy"
@@ -56,21 +63,37 @@ def _build_mcp() -> FastMCP:
     )
 
     @mcp.tool()
-    def get_by_id(id: str) -> dict | None:
-        """Look up a UNIMOD entry by ID. Accepts ``"1"`` or ``"UNIMOD:1"``."""
+    def get_by_id(id: str, include_hidden: bool = False) -> UnimodEntry | None:
+        """Look up a UNIMOD entry by ID. Accepts ``"1"`` or ``"UNIMOD:1"``.
+
+        Hidden specificities (rarely-used or deprecated sites flagged in
+        UNIMOD with ``hidden=true``) are excluded by default. Pass
+        ``include_hidden=True`` to see every site.
+        """
         entry = _db.get_by_id(id)
-        return serialize_entry(entry) if entry else None
+        if entry is None:
+            return None
+        return to_unimod_entry(entry, include_hidden=include_hidden)
 
     @mcp.tool()
-    def get_by_name(name: str) -> dict | None:
-        """Look up a UNIMOD entry by exact name (case-insensitive)."""
+    def get_by_name(name: str, include_hidden: bool = False) -> UnimodEntry | None:
+        """Look up a UNIMOD entry by exact name (case-insensitive).
+
+        See ``get_by_id`` for the meaning of ``include_hidden``.
+        """
         entry = _db.get_by_name(name)
-        return serialize_entry(entry) if entry else None
+        if entry is None:
+            return None
+        return to_unimod_entry(entry, include_hidden=include_hidden)
 
     @mcp.tool()
-    def search(query: str, limit: int = 25) -> list[dict]:
-        """Full-text search over name, definition, and synonyms. Returns up to ``limit`` results."""
-        return [serialize_entry(e) for e in _db.search(query)[:limit]]
+    def search(query: str, limit: int = 25) -> list[UnimodSummary]:
+        """Full-text search over name, definition, and synonyms.
+
+        Returns up to ``limit`` lightweight summaries.  Call ``get_by_id`` on
+        any returned ``id`` to fetch the full entry.
+        """
+        return [to_unimod_summary(e) for e in _db.search(query)[:limit]]
 
     return mcp
 
@@ -127,49 +150,50 @@ def health() -> dict:
     }
 
 
-@app.get("/api/entries")
+@app.get("/api/entries", response_model=EntryListResponse)
 def list_entries(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
-) -> dict:
+    include_hidden: bool = Query(False),
+) -> EntryListResponse:
     entries = list(_db)
     page = entries[offset : offset + limit]
-    return {
-        "total": len(entries),
-        "limit": limit,
-        "offset": offset,
-        "items": [serialize_entry(e) for e in page],
-    }
+    return EntryListResponse(
+        total=len(entries),
+        limit=limit,
+        offset=offset,
+        items=[to_unimod_entry(e, include_hidden=include_hidden) for e in page],
+    )
 
 
-@app.get("/api/entries/{id}")
-def get_entry(id: str) -> dict:
+@app.get("/api/entries/{id}", response_model=UnimodEntry)
+def get_entry(id: str, include_hidden: bool = Query(False)) -> UnimodEntry:
     entry = _db.get_by_id(id)
     if entry is None:
         raise HTTPException(status_code=404, detail=f"No entry for id={id!r}")
-    return serialize_entry(entry)
+    return to_unimod_entry(entry, include_hidden=include_hidden)
 
 
-@app.get("/api/entries/by-name/{name}")
-def get_entry_by_name(name: str) -> dict:
+@app.get("/api/entries/by-name/{name}", response_model=UnimodEntry)
+def get_entry_by_name(name: str, include_hidden: bool = Query(False)) -> UnimodEntry:
     entry = _db.get_by_name(name)
     if entry is None:
         raise HTTPException(status_code=404, detail=f"No entry for name={name!r}")
-    return serialize_entry(entry)
+    return to_unimod_entry(entry, include_hidden=include_hidden)
 
 
-@app.get("/api/search")
+@app.get("/api/search", response_model=SearchResponse)
 def search_entries(
     q: str = Query(..., min_length=1),
     limit: int = Query(50, ge=1, le=500),
-) -> dict:
+) -> SearchResponse:
     results = _db.search(q)
-    return {
-        "query": q,
-        "total": len(results),
-        "limit": limit,
-        "items": [serialize_entry(e) for e in results[:limit]],
-    }
+    return SearchResponse(
+        query=q,
+        total=len(results),
+        limit=limit,
+        items=[to_unimod_summary(e) for e in results[:limit]],
+    )
 
 
 # Mount MCP at the root; its inner app exposes /mcp.
