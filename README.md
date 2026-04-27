@@ -7,14 +7,18 @@
 
 Python library for parsing and querying the [UNIMOD](http://www.unimod.org/) mass spectrometry modifications database.
 
-- Zero dependencies
+- Zero core dependencies
 - Bundled UNIMOD data (1,552 entries) — works offline out of the box
 - Typed, immutable data models (`py.typed` / PEP 561)
 - TSV/CSV export and round-trip OBO writer
+- Optional FastAPI / [Model Context Protocol](https://modelcontextprotocol.io) server (`pip install unimodpy[server]`)
 
 
 ## Online Viewer
 #### [Click Me!](https://tacular-omics.github.io/unimodpy/)
+
+The same database is also reachable as a hosted REST + MCP service — see
+[HTTP API and MCP Server](#http-api-and-mcp-server) below.
 
 ## Installation
 
@@ -145,6 +149,59 @@ db2 = unimodpy.parse_obo("out/UNIMOD.obo")
 # Standalone function; pass the original header lines for a faithful round-trip
 from unimodpy import write_obo
 write_obo(db, "out/UNIMOD.obo", header_lines=db.header_lines)
+```
+
+## HTTP API and MCP Server
+
+The optional `[server]` extra ships a FastAPI app that exposes the same
+database over a JSON REST API *and* over the
+[Model Context Protocol](https://modelcontextprotocol.io) so language-model
+tools can query UNIMOD directly.
+
+```bash
+pip install unimodpy[server]
+uvicorn unimodpy.server.app:app --reload
+```
+
+### REST endpoints
+
+| Method & path | Returns |
+|---------------|---------|
+| `GET /api/health` | Service metadata and entry count. |
+| `GET /api/entries?limit=&offset=&include_hidden=` | Paginated full entries. |
+| `GET /api/entries/{id}` | One full entry by ID (`1` or `UNIMOD:1`). |
+| `GET /api/entries/by-name/{name}` | One full entry by exact name. |
+| `GET /api/search?q=&limit=` | Search hits as lightweight summaries. |
+
+Hidden specificities (UNIMOD's `hidden=true` sites) are filtered out by
+default; pass `?include_hidden=true` to keep them.
+
+Full entry payloads include `references` parsed from `definition_ref` into
+`{type, accession, value}` objects and `parent_id` (the entry's UNIMOD
+hierarchy parent). Search responses contain just `{id, accession, name,
+delta_mono_mass, proforma_formula}` to keep token cost low; call
+`/api/entries/{id}` on any hit for the full record.
+
+### MCP server
+
+The same FastAPI app mounts an MCP endpoint at `POST /mcp` with three tools:
+
+| Tool | Purpose |
+|------|---------|
+| `get_by_id(id, include_hidden=False)` | Look up a single entry. |
+| `get_by_name(name, include_hidden=False)` | Exact name lookup. |
+| `search(query, limit=25)` | Full-text search returning summaries. |
+
+Tool responses use MCP's structured-output mechanism: the server emits an
+`outputSchema` per tool in `tools/list` and returns both `structuredContent`
+(typed Pydantic instance) and `content` (text fallback) on `tools/call`, so
+LLM clients can parse the response without re-reading the JSON string.
+
+Configure your MCP-aware client to point at `http://localhost:8000/mcp`
+(or wherever you deploy the app). Example with the Anthropic CLI:
+
+```bash
+claude mcp add unimod http://localhost:8000/mcp --transport http
 ```
 
 ## API Overview
