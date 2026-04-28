@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, Response
@@ -11,6 +12,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
 import unimodpy
+from unimodpy.database import MassType
 from unimodpy.server.dashboard import dashboard_entries
 from unimodpy.server.models import (
     EntryListResponse,
@@ -24,13 +26,9 @@ from unimodpy.server.models import (
 _db = unimodpy.load()
 _PACKAGE = "unimodpy"
 
-
-# Render dashboard payload once at import time.
 _DATA_JSON = json.dumps(dashboard_entries(), separators=(",", ":")).encode()
 
 
-# Locate the static dashboard. On Vercel the function bundle includes ``docs/``
-# (see vercel.json includeFiles); locally it lives at the repo root.
 def _load_dashboard_html() -> str | None:
     for candidate in (
         Path.cwd() / "docs" / "index.html",
@@ -47,8 +45,15 @@ def _load_dashboard_html() -> str | None:
 _DASHBOARD_HTML = _load_dashboard_html()
 
 
+def _split_residues(residues: str | None) -> list[str] | None:
+    if residues is None:
+        return None
+    parts = [r.strip() for r in residues.split(",") if r.strip()]
+    return parts or None
+
+
 # ---------------------------------------------------------------------------
-# MCP server (mounted at /, exposes its own /mcp route)
+# MCP server
 # ---------------------------------------------------------------------------
 
 
@@ -57,19 +62,12 @@ def _build_mcp() -> FastMCP:
         _PACKAGE,
         instructions="Query the UNIMOD mass spectrometry modifications database.",
         stateless_http=True,
-        # Public deployment (Vercel): host changes per request; disable Host-header
-        # validation. Authentication, if needed, should be added separately.
         transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
     )
 
     @mcp.tool()
     def get_by_id(id: str, include_hidden: bool = False) -> UnimodEntry | None:
-        """Look up a UNIMOD entry by ID. Accepts ``"1"`` or ``"UNIMOD:1"``.
-
-        Hidden specificities (rarely-used or deprecated sites flagged in
-        UNIMOD with ``hidden=true``) are excluded by default. Pass
-        ``include_hidden=True`` to see every site.
-        """
+        """Look up a UNIMOD entry by ID. Accepts ``"1"`` or ``"UNIMOD:1"``."""
         entry = _db.get_by_id(id)
         if entry is None:
             return None
@@ -77,10 +75,7 @@ def _build_mcp() -> FastMCP:
 
     @mcp.tool()
     def get_by_name(name: str, include_hidden: bool = False) -> UnimodEntry | None:
-        """Look up a UNIMOD entry by exact name (case-insensitive).
-
-        See ``get_by_id`` for the meaning of ``include_hidden``.
-        """
+        """Look up a UNIMOD entry by exact name (case-insensitive)."""
         entry = _db.get_by_name(name)
         if entry is None:
             return None
@@ -88,17 +83,48 @@ def _build_mcp() -> FastMCP:
 
     @mcp.tool()
     def search(query: str, limit: int = 25) -> list[UnimodSummary]:
-        """Full-text search over name, definition, and synonyms.
-
-        Returns up to ``limit`` lightweight summaries.  Call ``get_by_id`` on
-        any returned ``id`` to fetch the full entry.
-        """
+        """Full-text search over name, definition, and synonyms."""
         return [to_unimod_summary(e) for e in _db.search(query)[:limit]]
+
+    @mcp.tool()
+    def find(
+        text: str | None = None,
+        mass_min: float | None = None,
+        mass_max: float | None = None,
+        mass_type: str = "mono",
+        residues: list[str] | None = None,
+        position: str | None = None,
+        classification: str | None = None,
+        has_neutral_loss: bool | None = None,
+        include_hidden: bool = False,
+        limit: int = 25,
+    ) -> list[UnimodSummary]:
+        """Fine-grained AND-combined search.
+
+        Filters: ``text`` (substring over name/def/synonyms), delta mass range
+        on ``mono`` or ``avg`` mass, ``residues`` against specificity sites
+        (e.g. ``[\"S\", \"T\", \"Y\"]`` or ``[\"N-term\"]``), ``position``
+        (e.g. ``\"Anywhere\"``, ``\"Any N-term\"``), ``classification`` (e.g.
+        ``\"N-linked glycosylation\"``), and ``has_neutral_loss``.
+        """
+        mt: MassType = "mono" if mass_type != "avg" else "avg"
+        results = _db.find(
+            text=text,
+            mass_min=mass_min,
+            mass_max=mass_max,
+            mass_type=mt,
+            residues=residues,
+            position=position,
+            classification=classification,
+            has_neutral_loss=has_neutral_loss,
+            include_hidden=include_hidden,
+            limit=limit,
+        )
+        return [to_unimod_summary(e) for e in results]
 
     return mcp
 
 
-# Module-level instance for inspection / re-export.
 mcp = _build_mcp()
 
 
@@ -107,8 +133,6 @@ mcp = _build_mcp()
 # ---------------------------------------------------------------------------
 
 
-# Vercel doesn't fire ASGI lifespan events, and StreamableHTTPSessionManager.run()
-# can only be called once per instance, so we build a fresh FastMCP per request.
 class _MCPWrapper:
     async def __call__(self, scope, receive, send) -> None:
         m = _build_mcp()
@@ -196,5 +220,32 @@ def search_entries(
     )
 
 
-# Mount MCP at the root; its inner app exposes /mcp.
+@app.get("/api/find", response_model=list[UnimodSummary])
+def find_entries(
+    text: str | None = Query(None),
+    mass_min: float | None = Query(None),
+    mass_max: float | None = Query(None),
+    mass_type: str = Query("mono", pattern="^(mono|avg)$"),
+    residues: str | None = Query(None, description="Comma-separated residue codes"),
+    position: str | None = Query(None),
+    classification: str | None = Query(None),
+    has_neutral_loss: bool | None = Query(None),
+    include_hidden: bool = Query(False),
+    limit: int = Query(50, ge=1, le=500),
+) -> list[UnimodSummary]:
+    results = _db.find(
+        text=text,
+        mass_min=mass_min,
+        mass_max=mass_max,
+        mass_type=cast(MassType, mass_type),
+        residues=_split_residues(residues),
+        position=position,
+        classification=classification,
+        has_neutral_loss=has_neutral_loss,
+        include_hidden=include_hidden,
+        limit=limit,
+    )
+    return [to_unimod_summary(e) for e in results]
+
+
 app.mount("/", _MCPWrapper())
