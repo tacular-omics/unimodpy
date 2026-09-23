@@ -70,9 +70,11 @@ api/index.py       Vercel entry point, just `from unimodpy.server.app import app
 docs/index.html    static dashboard; fetches data.json relative to itself
 scripts/           export_json.py (Pages data), audit_obo.py (unparsed OBO fields),
                    print_entries.py, release_version.py (shared release tool, do not hand-edit)
-vercel.json        one Python function (api/index.py, maxDuration 10, includeFiles docs/**),
-                   every path rewritten to /api/index
-requirements.txt   `.[server]`: Vercel installs this package with the server extra
+vercel.json        installCommand `uv pip install '.[server]'`; one Python function
+                   (api/index.py, maxDuration 10 s, includeFiles docs/**). No rewrites:
+                   the Vercel Python runtime routes every path to the FastAPI app itself
+requirements.txt   `.[server]`; legacy. Current @vercel/python ignores it when pyproject.toml
+                   exists, which is why vercel.json sets installCommand
 ```
 
 Data flow: `load()` -> `importlib.resources` path to `data/UNIMOD.obo` -> `parse_obo`
@@ -153,6 +155,9 @@ From `unimodpy/__init__.py`:
   FastMCP/mcp 1.x to `MCPServer`/mcp 2.x).
 - `scripts/print_entries.py` and `scripts/audit_obo.py` default to `UNIMOD.obo` at the repo
   root, which does not exist. Pass the path: `uv run python scripts/audit_obo.py src/unimodpy/data/UNIMOD.obo`.
+- Vercel: without `installCommand` the runtime installs from `pyproject.toml`/`uv.lock`
+  with no extras and every request fails with `ModuleNotFoundError: fastapi`. A
+  catch-all rewrite to `/api/index` makes every request 404. Keep both as they are.
 
 ## Releasing
 
@@ -162,8 +167,8 @@ Only the tacular-omics overseer bumps versions or publishes. See `just --list`
 `scripts/release_version.py sync` copies it to `CITATION.cff`. `.zenodo.json` carries no
 version. `CHANGELOG.md` uses `## [X.Y.Z] (YYYY-MM-DD)` sections under `## [Unreleased]`.
 PyPI upload runs from `.github/workflows/publish.yml` on a published GitHub release.
-The Vercel project (unimod.tacular.dev) builds from this repo via `vercel.json` +
-`requirements.txt`; check the Vercel dashboard before assuming which branch it tracks.
+The Vercel project (unimod.tacular.dev) builds from this repo via `vercel.json`
+(`installCommand`); check the Vercel dashboard before assuming which branch it tracks.
 
 ## Workspace note
 
