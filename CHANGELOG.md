@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.2] (2026-09-23)
+
 ### Fixed
 
 - Zero-mass neutral losses (UNIMOD composition `"0"`) now give an empty `dict_composition` (`{}`) and `proforma_formula` (`""`) instead of `{"0": 1}` and `"0"`.
