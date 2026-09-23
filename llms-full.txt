@@ -333,7 +333,7 @@ curl -s -X POST https://unimod.tacular.dev/mcp \
 - `specificities` on the dataclass includes hidden sites; the server hides them by default.
 - `NeutralLoss.composition` is UNIMOD's raw string. Zero-mass losses have composition
   `"0"` (so `dict_composition == {}` and `proforma_formula == ""`), and one uses `"Water"`,
-  which is not expanded.
+  which expands to `H2O`.
 - `approved` reflects UNIMOD's own flag; many common modifications (e.g. Oxidation) are
   `False`.
 - `load(refresh=True)` needs network access to `http://www.unimod.org`; the bundled file

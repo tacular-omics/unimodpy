@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `key in db` now accepts every key `db[key]` accepts (integer ID, `"UNIMOD:1"`, `"1"`, case-insensitive name) and returns `False` for unknown keys. It used to iterate entries, so `"Acetyl" in db` was `False`. Membership of a `UnimodEntry` object still works.
+- The composition token `Water` (neutral loss of UNIMOD:1010) expands to `H2O` in `dict_composition` and `proforma_formula`; it used to be kept as a literal `Water` key.
+
 ## [0.2.2] (2026-09-23)
 
 ### Fixed

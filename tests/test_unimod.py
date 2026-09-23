@@ -494,3 +494,29 @@ def test_to_proforma_formula_isotope_count_one() -> None:
     from unimodpy._formula import to_proforma_formula
 
     assert to_proforma_formula({"13C": 1, "C": -1, "15N": -2}) == "C-1[13C][15N-2]"
+
+
+# ---------------------------------------------------------------------------
+# Regression tests: membership and the "Water" composition token
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("key", [1, "1", "UNIMOD:1", "unimod:1", "Acetyl", "acetyl"])
+def test_contains_matches_getitem(db: UnimodDatabase, key: int | str) -> None:
+    assert key in db
+    assert db[key].id == 1
+
+
+@pytest.mark.parametrize("key", [999999, "UNIMOD:999999", "NotAMod", 1.5, None])
+def test_contains_missing_returns_false(db: UnimodDatabase, key: object) -> None:
+    assert key not in db
+
+
+def test_contains_entry_object(db: UnimodDatabase) -> None:
+    assert db[1] in db
+
+
+def test_water_neutral_loss_composition(db: UnimodDatabase) -> None:
+    nl = next(nl for s in db[1010].specificities for nl in s.neutral_losses if nl.composition == "Water")
+    assert nl.dict_composition == {"H": 2, "O": 1}
+    assert nl.proforma_formula == "H2O"

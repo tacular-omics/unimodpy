@@ -66,6 +66,14 @@ class UnimodDatabase:
             raise KeyError(id)
         return entry
 
+    def __contains__(self, key: object) -> bool:
+        """Return True if ``db[key]`` would succeed, or if key is an entry in this database."""
+        if isinstance(key, UnimodEntry):
+            return self._by_id.get(key.id) == key
+        if not isinstance(key, int | str):
+            return False
+        return self.get_by_id(key) is not None or self.get_by_name(str(key)) is not None
+
     def __len__(self) -> int:
         return len(self._entries)
 
