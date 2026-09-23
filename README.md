@@ -4,6 +4,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/unimodpy)](https://pypi.org/project/unimodpy/)
 [![Python](https://img.shields.io/pypi/pyversions/unimodpy)](https://pypi.org/project/unimodpy/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22926362.svg)](https://doi.org/10.5281/zenodo.22926362)
 
 Python library for parsing and querying the [UNIMOD](http://www.unimod.org/) mass spectrometry modifications database.
 
