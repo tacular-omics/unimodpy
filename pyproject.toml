@@ -37,7 +37,7 @@ server = [
 Homepage = "https://github.com/tacular-omics/unimodpy"
 Repository = "https://github.com/tacular-omics/unimodpy"
 Issues = "https://github.com/tacular-omics/unimodpy/issues"
-Changelog = "https://github.com/tacular-omics/unimodpy/blob/main/HISTORY.md"
+Changelog = "https://github.com/tacular-omics/unimodpy/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["hatchling"]
