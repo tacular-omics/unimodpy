@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "unimodpy: A Python library for the UNIMOD mass spectrometry modifications database"
+abstract: >-
+  unimodpy is a typed Python package for parsing and querying the UNIMOD
+  protein modification database used in mass spectrometry-based proteomics.
+  It ships with a bundled UNIMOD OBO file so it works offline, parses OBO
+  source files into typed, frozen dataclasses (UnimodEntry, Specificity,
+  NeutralLoss), and exposes a queryable UnimodDatabase with lookup by
+  integer ID, UNIMOD accession string, case-insensitive name, and full-text
+  search. It computes elemental composition and Hill-notation ProForma
+  formulas, including monosaccharide abbreviation expansion and isotope
+  label support, and offers TSV/CSV export and a round-trip OBO writer. An
+  optional FastAPI and Model Context Protocol server exposes the same
+  database over HTTP. unimodpy is intended for proteomics software,
+  annotation pipelines, and research scripts that need programmatic access
+  to UNIMOD modification data. It requires Python 3.12 or later.
+version: "0.1.2"
+authors:
+  - family-names: Garrett
+    given-names: Patrick T.
+    orcid: https://orcid.org/0000-0002-8434-9693
+    affiliation: Scripps Research Institute
+  - family-names: Yates
+    given-names: John R.
+    name-suffix: III
+    orcid: https://orcid.org/0000-0001-5267-1672
+    affiliation: Scripps Research Institute
+repository-code: https://github.com/tacular-omics/unimodpy
+license: MIT
+keywords:
+  - Python
+  - Proteomics
+  - UNIMOD
+  - Protein Modification
+  - Ontology
+  - Bioinformatics
+  - Mass Spectrometry
