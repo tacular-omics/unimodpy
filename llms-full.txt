@@ -1,0 +1,343 @@
+# unimodpy
+
+> Typed, dependency-free Python library for parsing and querying the UNIMOD
+> mass-spectrometry modifications database, with the full database bundled for
+> offline use, plus an optional FastAPI REST + MCP server (hosted at unimod.tacular.dev).
+
+This is the complete usage guide for unimodpy 0.2.x, written for AI tools and people
+who use the package. Contributor notes live in CLAUDE.md in the repository.
+
+- Source: https://github.com/tacular-omics/unimodpy
+- PyPI: https://pypi.org/project/unimodpy/
+- Hosted API + MCP: https://unimod.tacular.dev
+- Browser: https://tacular-omics.github.io/unimodpy/
+- Upstream data: http://www.unimod.org/ (Creasy & Cottrell, Proteomics 2004)
+
+## Install
+
+```bash
+pip install unimodpy              # core: Python >= 3.12, no third-party dependencies
+pip install "unimodpy[server]"    # + fastapi, uvicorn, mcp>=2.1.1,<3
+uv add unimodpy
+```
+
+The UNIMOD OBO file (1,552 terms including the root node `UNIMOD:0`) ships inside the
+wheel at `unimodpy/data/UNIMOD.obo`. Nothing touches the network unless you ask for a
+refresh.
+
+## Quick start
+
+```python
+import unimodpy
+
+db = unimodpy.load()                      # bundled database
+len(db)                                   # 1552
+
+acetyl = db.get_by_id(1)                  # int, "1", "UNIMOD:1" or "unimod:1"
+acetyl.name, acetyl.delta_mono_mass       # ('Acetyl', 42.010565)
+acetyl.proforma_formula                   # 'C2H2O'
+
+phospho = db.get_by_name("phospho")       # exact name, case-insensitive
+phospho.id                                # 21
+
+db["Oxidation"].id                        # 35  (db[...] tries ID, then name; KeyError if neither)
+len(db.search("glycosyl"))                # 6   (substring over name, definition, synonyms)
+
+db.get_by_id(999999)                      # None
+db.get_by_name("not a mod")               # None
+```
+
+## Public API
+
+Everything below is importable from `unimodpy` (`unimodpy.__all__`).
+
+### Loading
+
+`load(source: Path | str | None = None, *, refresh: bool = False) -> UnimodDatabase`
+: Load the database. No arguments: the bundled OBO. `source`: parse that OBO file.
+  `refresh=True`: call `download()` first and parse the fresh file. `refresh` is ignored
+  when `source` is given.
+
+`parse_obo(path: Path | str) -> UnimodDatabase`
+: Parse any UNIMOD-format OBO file. Streams `[Term]` blocks; keeps the header lines
+  (everything before the first `[Term]`) in `db.header_lines`. Raises `ValueError` if a
+  term has no `id` or `name`, and `ValueError` from the enum constructors if a
+  specificity uses an unknown site, position or classification.
+
+`download(dest: Path | str | None = None) -> Path`
+: Download `http://www.unimod.org/obo/unimod.obo` to `dest` (default
+  `~/.cache/unimodpy/UNIMOD.obo`), creating parent directories. Returns the path.
+  Network errors propagate from `urllib`.
+
+### Writing
+
+`write_tsv(entries: Iterable[UnimodEntry], path: Path | str, *, delimiter: str = "\t") -> Path`
+: One row per entry. Columns: `id` (as `UNIMOD:N`), `name`, `definition`, `synonyms`,
+  `comment`, `record_id`, `delta_mono_mass`, `delta_avge_mass`, `delta_composition`,
+  `username_of_poster`, `group_of_poster`, `date_time_posted`, `date_time_modified`,
+  `approved`, `is_a`, `specificities`. Multi-valued cells are joined with `"; "`;
+  a specificity is written `site:position:classification`. `None` becomes an empty cell.
+  Pass `delimiter=","` for CSV.
+
+`write_obo(entries: Iterable[UnimodEntry], path: Path | str, *, header_lines: Iterable[str] = ()) -> Path`
+: Write entries back to UNIMOD OBO. With no `header_lines`, a minimal
+  `format-version: 1.4` / `default-namespace: UNIMOD` header is written.
+  `parse_obo(write_obo(db, ...))` reproduces every entry and the header exactly.
+
+### UnimodDatabase
+
+`UnimodDatabase(entries: Iterable[UnimodEntry], *, header_lines: tuple[str, ...] = ())`
+: In-memory collection. Build one yourself to filter or combine entries.
+
+| member | purpose |
+|---|---|
+| `get_by_id(id: int \| str) -> UnimodEntry \| None` | int, `"21"`, `"UNIMOD:21"` (prefix case-insensitive); non-numeric string -> `None` |
+| `get_by_name(name: str) -> UnimodEntry \| None` | exact name, case-insensitive |
+| `search(query: str) -> list[UnimodEntry]` | case-insensitive substring over name, definition, synonyms; file order |
+| `db[key]` | `get_by_id(key)`, else `get_by_name(str(key))`, else `KeyError` |
+| `len(db)`, `iter(db)` | count and file-order iteration |
+| `write_tsv(path, *, delimiter="\t") -> Path` | as the module function |
+| `write_obo(path) -> Path` | as the module function, reusing `db.header_lines` |
+| `header_lines: tuple[str, ...]` | OBO header, e.g. `('format-version: 1.4', 'date: 17:06:2025 11:31', ...)` |
+
+### UnimodEntry (frozen, slots)
+
+| field | type | notes |
+|---|---|---|
+| `id` | `int` | `35` for `UNIMOD:35` |
+| `name` | `str` | e.g. `"Oxidation"` |
+| `definition` | `str` | `""` if missing |
+| `synonyms` | `tuple[str, ...]` | |
+| `definition_ref` | `str` | raw citation list from the `def:` line, e.g. `"RESID:AA0027, PMID:11461766, ..."` |
+| `comment` | `str \| None` | |
+| `record_id` | `int \| None` | |
+| `delta_mono_mass`, `delta_avge_mass` | `float \| None` | monoisotopic / average mass shift, Da |
+| `delta_composition` | `str \| None` | raw UNIMOD string, e.g. `"H(-1) N(-1) O"`, `"HexNAc"`, `"C(-6) 13C(6)"` |
+| `username_of_poster`, `group_of_poster` | `str \| None` | |
+| `date_time_posted`, `date_time_modified` | `datetime.datetime \| None` | |
+| `approved` | `bool \| None` | |
+| `is_a` | `int \| None` | parent ID: `0` for every term except the root, which has `None` |
+| `specificities` | `tuple[Specificity, ...]` | sorted by `spec_num`; includes hidden ones |
+
+Properties:
+
+- `dict_composition -> dict[str, int] | None`: `delta_composition` expanded to elements.
+  Monosaccharide abbreviations (`Hex`, `HexNAc`, `HexA`, `dHex`, `NeuAc`, `NeuGc`, `Pent`,
+  `HexN`, `Kdn`, `Hep`, `Sulf`, `sulfate`, `Ac`, `Me`, `Su`) expand to residue formulas;
+  isotopes stay separate keys (`"13C"`, `"2H"`, `"15N"`); counts may be negative; zero
+  counts are dropped.
+- `proforma_formula -> str | None`: Hill-ordered formula string from `dict_composition`
+  (C, then C isotopes, H, then H isotopes, then alphabetical), e.g. `"C2H2O"`,
+  `"H-1N-1O"`, `"C-613C6N-215N2"`.
+
+The root node `UNIMOD:0` ("unimod root node") has every xref-derived field `None`.
+
+### Specificity (frozen, slots)
+
+`spec_num: int`, `group: int`, `hidden: bool`, `site: Site`, `position: Position`,
+`classification: Classification`, `misc_notes: str | None`,
+`neutral_losses: tuple[NeutralLoss, ...]` (sorted by key).
+`hidden=True` marks rare or deprecated sites that UNIMOD hides from default listings.
+`str(spec)` gives `"Spec 1: S @ Anywhere [Post-translational]"` plus notes and losses.
+
+### NeutralLoss (frozen, slots)
+
+`key: int` (nominal loss mass from the xref name, e.g. `98`), `mono_mass: float`,
+`avge_mass: float`, `flag: bool`, `composition: str` (raw, e.g. `"H(3) O(4) P"`).
+Properties `dict_composition` and `proforma_formula` work as on `UnimodEntry`.
+
+### Enums (StrEnum)
+
+- `Site` (23): `A C D E F G H I K L M N P Q R S T U V W Y`, plus `N_TERM = "N-term"`,
+  `C_TERM = "C-term"`.
+- `Position` (5): `ANYWHERE "Anywhere"`, `ANY_N_TERM "Any N-term"`, `ANY_C_TERM "Any C-term"`,
+  `PROTEIN_N_TERM "Protein N-term"`, `PROTEIN_C_TERM "Protein C-term"`.
+- `Classification` (14): `"AA substitution"`, `"Artefact"`, `"Chemical derivative"`,
+  `"Co-translational"`, `"Isotopic label"`, `"Multiple"`, `"N-linked glycosylation"`,
+  `"Non-standard residue"`, `"O-linked glycosylation"`, `"Other"`, `"Other glycosylation"`,
+  `"Post-translational"`, `"Pre-translational"`, `"Synth. pep. protect. gp."`.
+
+Being `StrEnum`s, members compare equal to their strings: `Site.C == "C"`,
+`Site("N-term") is Site.N_TERM`.
+
+`__version__: str` is the package version.
+
+## Worked examples
+
+### Entry details
+
+```python
+import unimodpy
+
+db = unimodpy.load()
+ox = db["Oxidation"]
+repr(ox)            # "UnimodEntry(id=35, name='Oxidation', formula='O', mono_mass=15.994915)"
+ox.delta_avge_mass  # 15.9994
+ox.date_time_posted # datetime.datetime(2002, 8, 19, 19, 17, 11)
+print(db[1])        # multi-line summary: id, definition, formula, masses, sites
+```
+
+### Sites and neutral losses
+
+```python
+from unimodpy import Classification, Position, Site
+
+phospho = db["Phospho"]
+spec = phospho.specificities[0]
+spec.site, spec.position, spec.classification
+# (<Site.S: 'S'>, <Position.ANYWHERE: 'Anywhere'>, <Classification.POST_TRANSLATIONAL: 'Post-translational'>)
+
+nl = spec.neutral_losses[1]
+nl.key, nl.mono_mass, nl.proforma_formula      # (98, 97.976896, 'H3O4P')
+
+visible = [s for s in phospho.specificities if not s.hidden]   # 2 of 8
+```
+
+### Filtering
+
+```python
+# every modification allowed on cysteine, anywhere in the sequence
+cys = [
+    e for e in db
+    if any(s.site == Site.C and s.position == Position.ANYWHERE and not s.hidden
+           for s in e.specificities)
+]
+
+# isotopic labels only
+labels = [e for e in db
+          if any(s.classification == Classification.ISOTOPIC_LABEL for s in e.specificities)]
+
+# mass match within 1 mDa
+hits = [e.name for e in db
+        if e.delta_mono_mass is not None and abs(e.delta_mono_mass - 15.994915) < 0.001]
+# ['Ala->Ser', 'Oxidation', 'Phe->Tyr']
+```
+
+### Compositions and formulas
+
+```python
+db["HexNAc"].dict_composition       # {'C': 8, 'H': 13, 'N': 1, 'O': 5}
+db["Deamidated"].proforma_formula    # 'H-1N-1O'
+db["Label:13C(6)15N(2)"].delta_composition   # 'C(-6) 13C(6) N(-2) 15N(2)'
+db["Label:13C(6)15N(2)"].proforma_formula    # 'C-613C6N-215N2'
+```
+
+### Export and refresh
+
+```python
+db.write_tsv("unimod.tsv")
+db.write_tsv("unimod.csv", delimiter=",")
+db.write_obo("out/UNIMOD.obo")
+assert list(unimodpy.parse_obo("out/UNIMOD.obo")) == list(db)
+
+unimodpy.write_tsv([e for e in db if e.approved], "approved.tsv")   # any iterable of entries
+
+fresh = unimodpy.load(refresh=True)          # downloads to ~/.cache/unimodpy/UNIMOD.obo
+path = unimodpy.download("/tmp/UNIMOD.obo")  # just the file
+```
+
+## HTTP API (server extra)
+
+Hosted at https://unimod.tacular.dev (Vercel). Run your own:
+
+```bash
+pip install "unimodpy[server]"
+uvicorn unimodpy.server.app:app --reload     # http://127.0.0.1:8000
+```
+
+The app is `unimodpy.server.app:app` (also `from unimodpy.server import app`). It loads
+the bundled database once at import.
+
+| method + path | query params | returns |
+|---|---|---|
+| `GET /api/health` | | `{"ok": true, "package": "unimodpy", "version": "0.2.1", "count": 1552}` |
+| `GET /api/entries` | `limit` 1-500 (50), `offset` >= 0 (0), `include_hidden` (false) | `{total, limit, offset, items: [UnimodEntry]}`; starts with the root node id 0 |
+| `GET /api/entries/{id}` | `include_hidden` | `UnimodEntry`; `id` is `21` or `UNIMOD:21`; 404 `{"detail": "No entry for id='...'"}` |
+| `GET /api/entries/by-name/{name}` | `include_hidden` | `UnimodEntry`; exact, case-insensitive; 404 if missing |
+| `GET /api/search` | `q` (required, min length 1), `limit` 1-500 (50) | `{query, total, limit, items: [UnimodSummary]}` |
+| `GET /` | | browser dashboard HTML (404 when `docs/index.html` is not on disk, e.g. a pip install) |
+| `GET /data.json` | | dashboard payload: list of 1,551 entries (root node excluded) |
+| `GET /docs`, `/redoc`, `/openapi.json` | | FastAPI OpenAPI docs |
+| `POST /mcp` | | MCP (below) |
+
+Out-of-range query values return 422.
+
+Wire models (`unimodpy.server.models`, pydantic):
+
+- `UnimodEntry`: `id`, `accession` (`"UNIMOD:21"`), `name`, `definition` (`None` if empty),
+  `references: [Reference]`, `synonyms`, `comment`, `parent_id` (= `is_a`),
+  `delta_mono_mass`, `delta_avge_mass`, `delta_composition`, `proforma_formula`,
+  `dict_composition`, `approved`, `specificities: [Specificity]`.
+  Hidden specificities are removed unless `include_hidden=true`.
+- `Specificity`: `spec_num`, `group`, `hidden`, `site`, `position`, `classification`
+  (plain strings), `misc_notes`, `neutral_losses: [NeutralLoss]`.
+- `NeutralLoss`: `key`, `mono_mass`, `avge_mass`, `flag`, `composition`, `proforma_formula`.
+- `UnimodSummary`: `id`, `accession`, `name`, `delta_mono_mass`, `proforma_formula`.
+- `Reference`: `type`, `accession`, `value`. Parsed from `definition_ref` by
+  `unimodpy.server.references.parse_definition_ref`: `RESID:AA0036` ->
+  `{"type": "RESID", "accession": "AA0036"}`; `URL:http\://...` (also `UNIMODURL`,
+  `FindModURL`, `MISCURL`) -> `{"type": "URL", "value": "http://..."}` with OBO escapes
+  removed; a token without a colon -> `{"type": "Misc", "value": ...}`.
+
+```bash
+curl -s https://unimod.tacular.dev/api/entries/UNIMOD:21
+curl -s "https://unimod.tacular.dev/api/entries/by-name/Carbamidomethyl?include_hidden=true"
+curl -s "https://unimod.tacular.dev/api/search?q=TMT&limit=5"
+```
+
+## MCP server (server extra)
+
+Server name `unimodpy`, instructions "Query the UNIMOD mass spectrometry modifications
+database." Built on `mcp.server.MCPServer` (mcp 2.x). Tools:
+
+| tool | arguments | returns |
+|---|---|---|
+| `get_by_id` | `id: str` (`"1"` or `"UNIMOD:1"`), `include_hidden: bool = false` | `UnimodEntry` or null |
+| `get_by_name` | `name: str` (exact, case-insensitive), `include_hidden: bool = false` | `UnimodEntry` or null |
+| `search` | `query: str`, `limit: int = 25` | list of `UnimodSummary`; call `get_by_id` for full records |
+
+Results come back as `structuredContent` with an `outputSchema`, plus a JSON text block.
+
+Three ways to reach it:
+
+1. Hosted, streamable HTTP: `https://unimod.tacular.dev/mcp`
+   `claude mcp add unimod https://unimod.tacular.dev/mcp --transport http`
+2. Local HTTP: run uvicorn as above, then use `http://localhost:8000/mcp`.
+3. Local stdio (no console script is installed; launch through Python):
+   `python -c "from unimodpy.server import mcp; mcp.run()"`
+   e.g. `claude mcp add unimod -- python -c "from unimodpy.server import mcp; mcp.run()"`
+
+The HTTP transport is stateless: each POST is handled by a fresh server, so a client can
+call `tools/call` without a prior `initialize`. Send
+`Accept: application/json, text/event-stream`; responses are SSE `event: message`
+frames. There is no authentication and DNS-rebinding protection is off (the service is
+public and read-only).
+
+```bash
+curl -s -X POST https://unimod.tacular.dev/mcp \
+  -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call",
+       "params":{"name":"get_by_name","arguments":{"name":"Oxidation"}}}'
+```
+
+## Gotchas
+
+- Lookups return `None`, not an exception; only `db[...]` raises `KeyError`.
+- `get_by_id` only accepts numbers or `UNIMOD:N`; `get_by_id("Acetyl")` is `None`. Use
+  `db["Acetyl"]` if the key may be either.
+- `search` is plain substring matching, not fuzzy or ranked: `search("TMT")` returns 13
+  entries in file order.
+- `len(db)` and `/api/entries` include the root node `UNIMOD:0`, whose masses and
+  composition are `None`. Guard with `e.delta_mono_mass is not None`.
+- `specificities` on the dataclass includes hidden sites; the server hides them by default.
+- `NeutralLoss.composition` is UNIMOD's raw string. Zero-mass losses have composition
+  `"0"` (so `dict_composition == {"0": 1}`), and one uses `"Water"`, which is not expanded.
+- `proforma_formula` writes isotopes inline (`"C-613C6N-215N2"`); if you need strict
+  ProForma 2.0 formula syntax, build it from `dict_composition` yourself.
+- `approved` reflects UNIMOD's own flag; many common modifications (e.g. Oxidation) are
+  `False`.
+- `load(refresh=True)` needs network access to `http://www.unimod.org`; the bundled file
+  is a snapshot (see `db.header_lines` for its date).
+- The dashboard route `/` only works when `docs/index.html` is present (repo checkout or
+  the Vercel bundle), not from an installed wheel.

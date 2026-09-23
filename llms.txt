@@ -1,0 +1,40 @@
+# unimodpy
+
+> Typed, dependency-free Python library for parsing and querying the UNIMOD
+> mass-spectrometry modifications database, with the full database bundled for
+> offline use, plus an optional FastAPI REST + MCP server (hosted at unimod.tacular.dev).
+
+`import unimodpy; db = unimodpy.load()` returns a `UnimodDatabase` of 1,552 terms.
+Look up by ID (`db.get_by_id(1)` or `"UNIMOD:1"`), exact case-insensitive name
+(`db.get_by_name("Phospho")`), or substring search over names, definitions and synonyms
+(`db.search("glycosyl")`). Each `UnimodEntry` carries masses, the raw
+`delta_composition`, an expanded `dict_composition`, a Hill-order `proforma_formula`,
+and per-site `Specificity` rules with neutral losses. Missing lookups return `None`.
+`load(refresh=True)` downloads the latest OBO from unimod.org; `write_tsv` and
+`write_obo` export (OBO round-trips exactly).
+
+The public server at https://unimod.tacular.dev exposes the same data as JSON
+(`/api/entries/{id}`, `/api/entries/by-name/{name}`, `/api/search?q=`) and as an MCP
+endpoint at `POST /mcp` with tools `get_by_id`, `get_by_name` and `search`:
+`claude mcp add unimod https://unimod.tacular.dev/mcp --transport http`.
+
+## Docs
+
+- [llms-full.txt](https://raw.githubusercontent.com/tacular-omics/unimodpy/main/llms-full.txt): complete usage guide: every public name, server routes, MCP tools, examples, gotchas
+- [README](https://github.com/tacular-omics/unimodpy/blob/main/README.md): install, quick example, API table
+- [CHANGELOG](https://github.com/tacular-omics/unimodpy/blob/main/CHANGELOG.md): release history
+- [CLAUDE.md](https://github.com/tacular-omics/unimodpy/blob/main/CLAUDE.md): contributor guide for coding agents working in the repo
+
+## API
+
+- [Live REST API + OpenAPI docs](https://unimod.tacular.dev/docs): interactive FastAPI docs for the hosted server
+- [Health check](https://unimod.tacular.dev/api/health): version and entry count of the deployed database
+- [MCP endpoint](https://unimod.tacular.dev/mcp): streamable HTTP, stateless, POST only
+- [Package source](https://github.com/tacular-omics/unimodpy/tree/main/src/unimodpy): models.py, database.py, parser.py, server/
+
+## Optional
+
+- [Online UNIMOD browser](https://tacular-omics.github.io/unimodpy/): searchable dashboard (also served at https://unimod.tacular.dev/)
+- [PyPI](https://pypi.org/project/unimodpy/): `pip install unimodpy` or `pip install "unimodpy[server]"`
+- [UNIMOD](http://www.unimod.org/): the upstream database; cite Creasy & Cottrell, Proteomics 2004
+- [psimodpy](https://github.com/tacular-omics/psimodpy) and [uniprotptmpy](https://github.com/tacular-omics/uniprotptmpy): same design for PSI-MOD and UniProt PTM
