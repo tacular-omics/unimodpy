@@ -21,7 +21,7 @@ users outside the workspace: `peff_digest`, `peff_uniprot_fetcher`.
 ## Commands
 
 ```bash
-just test            # uv run pytest tests            (99 tests, ~4 s)
+just test            # uv run pytest tests            (112 tests, ~4 s)
 just lint            # uv run ruff check src tests
 just ty              # uv run ty check src
 just check           # lint + ty + test  (the recipe comment says "type checking"; it runs all three)
@@ -146,7 +146,7 @@ From `unimodpy/__init__.py`:
 - `load(source, refresh=True)`: `refresh` is ignored when `source` is given.
 - `NeutralLoss.composition` is UNIMOD's raw string. Zero-loss entries use `"0"`, which
   `_formula` treats as no atoms: `dict_composition` is `{}` and `proforma_formula` is `""`.
-  One loss uses `"Water"`, which is not expanded. Treat it as a known data quirk.
+  One loss (UNIMOD:1010) uses `"Water"`, which `MONOSACCHARIDE_FORMULAS` expands to `H2O`.
 - `_formula.MONOSACCHARIDE_FORMULAS` holds residue (minus water) formulas; unknown tokens
   are kept verbatim as keys.
 - Changing the MCP major version is breaking for the `server` extra (0.2.0 moved from

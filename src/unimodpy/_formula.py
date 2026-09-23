@@ -35,6 +35,7 @@ MONOSACCHARIDE_FORMULAS: dict[str, str] = {
     "Kdn": "C9H14O8",
     "Su": "C4H4O4",
     "Hep": "C7H12O6",
+    "Water": "H2O",
 }
 
 # Tokenises a standard elemental formula string like "C6H10O5" or "CH2".
