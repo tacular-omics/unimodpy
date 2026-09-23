@@ -26,7 +26,7 @@ _PACKAGE = "unimodpy"
 
 
 # Render dashboard payload once at import time.
-_DATA_JSON = json.dumps(dashboard_entries(), separators=(",", ":")).encode()
+_DATA_JSON = json.dumps(dashboard_entries(_db), separators=(",", ":")).encode()
 
 
 # Locate the static dashboard. On Vercel the function bundle includes ``docs/``

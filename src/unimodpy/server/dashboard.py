@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import unimodpy
+from unimodpy.database import UnimodDatabase
 
 
-def dashboard_entries() -> list[dict]:
-    db = unimodpy.load()
+def dashboard_entries(db: UnimodDatabase | None = None) -> list[dict]:
+    """Dashboard rows for every entry except the root node; loads the bundled database if *db* is omitted."""
+    if db is None:
+        db = unimodpy.load()
     entries: list[dict] = []
     for entry in db:
         if entry.id == 0:

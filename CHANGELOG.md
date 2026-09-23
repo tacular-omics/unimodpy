@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Zero-mass neutral losses (UNIMOD composition `"0"`) now give an empty `dict_composition` (`{}`) and `proforma_formula` (`""`) instead of `{"0": 1}` and `"0"`.
+- `proforma_formula` brackets isotopes as ProForma 2.0 requires (`C-6[13C6]N-2[15N2]`, was `C-613C6N-215N2`). `dict_composition` keys are unchanged.
+- The server parses the bundled OBO file once at import instead of twice; `dashboard_entries()` takes an optional database.
+- `scripts/print_entries.py` and `scripts/audit_obo.py` default to the bundled `src/unimodpy/data/UNIMOD.obo`.
+- `just lint` and `just format` cover `tests` as CI does. Removed the unused `requirements.txt`.
+
 ## [0.2.1] (2026-09-23)
 
 ### Added
