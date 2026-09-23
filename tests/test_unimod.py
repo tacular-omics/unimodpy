@@ -9,8 +9,6 @@ from pathlib import Path
 import pytest
 
 from unimodpy import UnimodDatabase, parse_obo
-from unimodpy.models import UnimodEntry
-
 
 # ---------------------------------------------------------------------------
 # Parsing — entry count and root node
