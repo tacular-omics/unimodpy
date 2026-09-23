@@ -73,7 +73,7 @@ def test_round_trip_specificities(db: UnimodDatabase, tmp_path) -> None:
     db2 = parse_obo(out)
     e1, e2 = db[1], db2[1]
     assert len(e1.specificities) == len(e2.specificities)
-    for s1, s2 in zip(e1.specificities, e2.specificities):
+    for s1, s2 in zip(e1.specificities, e2.specificities, strict=True):
         assert s1.site == s2.site
         assert s1.position == s2.position
         assert s1.classification == s2.classification

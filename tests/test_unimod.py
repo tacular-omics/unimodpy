@@ -9,8 +9,6 @@ from pathlib import Path
 import pytest
 
 from unimodpy import UnimodDatabase, parse_obo
-from unimodpy.models import UnimodEntry
-
 
 # ---------------------------------------------------------------------------
 # Parsing — entry count and root node
@@ -265,12 +263,7 @@ def test_specificity_is_frozen(db: UnimodDatabase) -> None:
 def test_parse_obo_minimal(tmp_path: Path) -> None:
     obo = tmp_path / "mini.obo"
     obo.write_text(
-        "format-version: 1.4\n\n"
-        "[Term]\n"
-        "id: UNIMOD:0\n"
-        'name: unimod root node\n'
-        'def: "Root node." [UNIMOD:0]\n'
-        "\n"
+        'format-version: 1.4\n\n[Term]\nid: UNIMOD:0\nname: unimod root node\ndef: "Root node." [UNIMOD:0]\n\n'
     )
     result = parse_obo(str(obo))
     assert len(result) == 1
@@ -280,12 +273,7 @@ def test_parse_obo_minimal(tmp_path: Path) -> None:
 
 def test_parse_obo_accepts_path(tmp_path: Path) -> None:
     obo = tmp_path / "mini.obo"
-    obo.write_text(
-        "[Term]\n"
-        "id: UNIMOD:0\n"
-        'name: unimod root node\n'
-        'def: "Root." [UNIMOD:0]\n'
-    )
+    obo.write_text('[Term]\nid: UNIMOD:0\nname: unimod root node\ndef: "Root." [UNIMOD:0]\n')
     result = parse_obo(obo)  # Path object, no trailing newline
     assert len(result) == 1
 
@@ -421,7 +409,7 @@ def test_composition_mixed_monosaccharide_and_elements(db: UnimodDatabase) -> No
     comp = e.dict_composition
     assert comp is not None
     # Hex(3) = C18H30O15, HexNAc(2) = C16H26N2O10, + H, O3, P
-    assert comp["C"] == 18 + 16       # 34
+    assert comp["C"] == 18 + 16  # 34
     assert comp["N"] == 2
     assert comp["P"] == 1
 
