@@ -471,3 +471,26 @@ def test_composition_returns_new_dict_each_call(db: UnimodDatabase) -> None:
     assert comp1 is not None
     comp1["C"] = 999
     assert e.dict_composition == {"C": 2, "H": 2, "O": 1}
+
+
+def test_zero_neutral_loss_has_empty_composition(db: UnimodDatabase) -> None:
+    # UNIMOD writes zero-mass neutral losses as composition "0"; that is no atoms, not an element "0".
+    losses = [nl for e in db for s in e.specificities for nl in s.neutral_losses if nl.composition == "0"]
+    assert losses
+    for nl in losses:
+        assert nl.dict_composition == {}
+        assert nl.proforma_formula == ""
+
+
+def test_proforma_formula_isotopes_are_bracketed(db: UnimodDatabase) -> None:
+    # ProForma 2.0 Formula Rule 3: isotopes are written in brackets, count inside: [13C2]
+    e = next(e for e in db if e.delta_composition == "H(-1) 2H(3) C(2) O")
+    assert e.proforma_formula == "C2H-1[2H3]O"
+    e = next(e for e in db if e.delta_composition == "H(4) 13C(3) O")
+    assert e.proforma_formula == "[13C3]H4O"
+
+
+def test_to_proforma_formula_isotope_count_one() -> None:
+    from unimodpy._formula import to_proforma_formula
+
+    assert to_proforma_formula({"13C": 1, "C": -1, "15N": -2}) == "C-1[13C][15N-2]"

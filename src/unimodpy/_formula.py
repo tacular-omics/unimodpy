@@ -6,6 +6,7 @@ The delta_composition field uses space-separated tokens like:
   "H(3) C(2) N S Hex(2)"  – mixed
   "2H(8) 13C(3)"          – stable-isotope labelled elements
   "H(-2) C(-1)"           – negative counts (mass shifts)
+  "0"                     – no atoms (zero-mass neutral losses)
 """
 
 from __future__ import annotations
@@ -70,6 +71,9 @@ def parse_delta_composition(delta_composition: str) -> dict[str, int]:
     counts: dict[str, int] = defaultdict(int)
 
     for token in delta_composition.split():
+        if token == "0":
+            # UNIMOD writes an empty composition (zero-mass neutral loss) as "0".
+            continue
         if "(" in token:
             key, tail = token.split("(", 1)
             count = int(tail.rstrip(")"))
@@ -114,12 +118,17 @@ def to_proforma_formula(composition: dict[str, int]) -> str:
 
     Suitable for use in ProForma modification annotations, e.g. inside
     ``[Formula:C2H2O]``.  Count of 1 is omitted; negative counts are written
-    with a ``-`` sign directly after the symbol (e.g. ``H-1``).
+    with a ``-`` sign directly after the symbol (e.g. ``H-1``).  Isotopes are
+    bracketed with the count inside, per ProForma 2.0 Formula Rule 3
+    (e.g. ``[13C2]``, ``[2H]``).
     """
     parts: list[str] = []
     for sym, count in sorted(composition.items(), key=lambda x: _hill_sort_key(x[0])):
         if count == 0:
             continue
         count_str = "" if count == 1 else str(count)
-        parts.append(f"{sym}{count_str}")
+        if sym[0].isdigit():
+            parts.append(f"[{sym}{count_str}]")
+        else:
+            parts.append(f"{sym}{count_str}")
     return "".join(parts)

@@ -128,7 +128,7 @@ Properties:
   counts are dropped.
 - `proforma_formula -> str | None`: Hill-ordered formula string from `dict_composition`
   (C, then C isotopes, H, then H isotopes, then alphabetical), e.g. `"C2H2O"`,
-  `"H-1N-1O"`, `"C-613C6N-215N2"`.
+  `"H-1N-1O"`, `"C-6[13C6]N-2[15N2]"`. Isotopes are bracketed as in ProForma 2.0.
 
 The root node `UNIMOD:0` ("unimod root node") has every xref-derived field `None`.
 
@@ -219,7 +219,7 @@ hits = [e.name for e in db
 db["HexNAc"].dict_composition       # {'C': 8, 'H': 13, 'N': 1, 'O': 5}
 db["Deamidated"].proforma_formula    # 'H-1N-1O'
 db["Label:13C(6)15N(2)"].delta_composition   # 'C(-6) 13C(6) N(-2) 15N(2)'
-db["Label:13C(6)15N(2)"].proforma_formula    # 'C-613C6N-215N2'
+db["Label:13C(6)15N(2)"].proforma_formula    # 'C-6[13C6]N-2[15N2]'
 ```
 
 ### Export and refresh
@@ -332,9 +332,8 @@ curl -s -X POST https://unimod.tacular.dev/mcp \
   composition are `None`. Guard with `e.delta_mono_mass is not None`.
 - `specificities` on the dataclass includes hidden sites; the server hides them by default.
 - `NeutralLoss.composition` is UNIMOD's raw string. Zero-mass losses have composition
-  `"0"` (so `dict_composition == {"0": 1}`), and one uses `"Water"`, which is not expanded.
-- `proforma_formula` writes isotopes inline (`"C-613C6N-215N2"`); if you need strict
-  ProForma 2.0 formula syntax, build it from `dict_composition` yourself.
+  `"0"` (so `dict_composition == {}` and `proforma_formula == ""`), and one uses `"Water"`,
+  which is not expanded.
 - `approved` reflects UNIMOD's own flag; many common modifications (e.g. Oxidation) are
   `False`.
 - `load(refresh=True)` needs network access to `http://www.unimod.org`; the bundled file

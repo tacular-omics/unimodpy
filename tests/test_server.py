@@ -196,3 +196,30 @@ def test_rest_search_returns_summaries() -> None:
         assert {"query", "total", "limit", "items"} <= set(body)
         for item in body["items"]:
             UnimodSummary.model_validate(item)
+
+
+# ---------------------------------------------------------------------------
+# Import-time cost
+# ---------------------------------------------------------------------------
+
+
+def test_server_import_parses_obo_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    import importlib
+    import sys
+
+    import unimodpy.parser
+
+    # ``unimodpy.server.app`` the attribute is the FastAPI app; the module lives in sys.modules.
+    app_module = sys.modules["unimodpy.server.app"]
+
+    calls = 0
+    real_parse = unimodpy.parser.parse_obo
+
+    def counting_parse(path):
+        nonlocal calls
+        calls += 1
+        return real_parse(path)
+
+    monkeypatch.setattr(unimodpy.parser, "parse_obo", counting_parse)
+    importlib.reload(app_module)
+    assert calls == 1

@@ -16,6 +16,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+OBO_PATH = Path(__file__).parent.parent / "src" / "unimodpy" / "data" / "UNIMOD.obo"
+
 _XREF_RE = re.compile(r'^xref:\s+(\S+)\s+"(.*)"$')
 _SYN_RE = re.compile(r'^synonym:\s+"(.*)"\s+\w+\s+\[\]$')
 _SPEC_RE = re.compile(r"^spec_(\d+)_(group|hidden|site|position|classification|misc_notes)$")
@@ -200,7 +202,7 @@ def audit(path: Path) -> None:
 
 
 if __name__ == "__main__":
-    obo_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).parent.parent / "UNIMOD.obo"
+    obo_path = Path(sys.argv[1]) if len(sys.argv) > 1 else OBO_PATH
     if not obo_path.exists():
         print(f"File not found: {obo_path}", file=sys.stderr)
         sys.exit(1)

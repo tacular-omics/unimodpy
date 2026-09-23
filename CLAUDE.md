@@ -21,22 +21,22 @@ users outside the workspace: `peff_digest`, `peff_uniprot_fetcher`.
 ## Commands
 
 ```bash
-just test            # uv run pytest tests            (93 tests, ~4 s)
-just lint            # uv run ruff check src
+just test            # uv run pytest tests            (99 tests, ~4 s)
+just lint            # uv run ruff check src tests
 just ty              # uv run ty check src
 just check           # lint + ty + test  (the recipe comment says "type checking"; it runs all three)
-just format          # ruff isort --fix + ruff format on src  (rewrites files)
+just format          # ruff isort --fix + ruff format on src and tests  (rewrites files)
 just build           # uv build, then list the *.obo files inside the wheel
 just check-version   # python scripts/release_version.py check
 just --list          # everything, including set-version / sync-version (overseer only)
 ```
 
 `just` with no recipe runs `default: lint format check test`, which **rewrites files**
-(format). CI is stricter than the justfile: it runs `ruff check src tests`,
-`ruff format --check src tests`, `ty check src`, `release_version.py check`, pytest on
+(format). CI also runs `ruff format --check src tests` (the justfile only formats),
+`ty check src`, `release_version.py check`, pytest on
 3.12/3.13/3.14 plus macOS and Windows, a `--resolution lowest-direct` job, and a wheel
 check that `UNIMOD.obo` is packaged. Before pushing, also run
-`uv run ruff check src tests && uv run ruff format --check src tests`.
+`uv run ruff format --check src tests`.
 
 Server, locally:
 
@@ -65,7 +65,7 @@ src/unimodpy/
     app.py         FastAPI app, REST routes, MCPServer + per-request _MCPWrapper mounted at "/"
     models.py      pydantic wire models + to_unimod_entry / to_unimod_summary converters
     references.py  parse_definition_ref: "RESID:AA0036, URL:http\://..." -> list[Reference]
-    dashboard.py   dashboard_entries(): payload for /data.json and docs/data.json (skips id 0)
+    dashboard.py   dashboard_entries(db=None): payload for /data.json and docs/data.json (skips id 0)
 api/index.py       Vercel entry point, just `from unimodpy.server.app import app`
 docs/index.html    static dashboard; fetches data.json relative to itself
 scripts/           export_json.py (Pages data), audit_obo.py (unparsed OBO fields),
@@ -73,8 +73,6 @@ scripts/           export_json.py (Pages data), audit_obo.py (unparsed OBO field
 vercel.json        installCommand `uv pip install '.[server]'`; one Python function
                    (api/index.py, maxDuration 10 s, includeFiles docs/**). No rewrites:
                    the Vercel Python runtime routes every path to the FastAPI app itself
-requirements.txt   `.[server]`; legacy. Current @vercel/python ignores it when pyproject.toml
-                   exists, which is why vercel.json sets installCommand
 ```
 
 Data flow: `load()` -> `importlib.resources` path to `data/UNIMOD.obo` -> `parse_obo`
@@ -146,15 +144,13 @@ From `unimodpy/__init__.py`:
   excludes it; `/api/entries` and `len(db)` include it.
 - `db[key]` tries the ID first, then the name. `get_by_id("Acetyl")` returns `None`.
 - `load(source, refresh=True)`: `refresh` is ignored when `source` is given.
-- `NeutralLoss.composition` is UNIMOD's raw string. Zero-loss entries use `"0"`, so their
-  `dict_composition` is `{"0": 1}` and `proforma_formula` is `"0"`. One loss uses `"Water"`,
-  which is not expanded. Treat these as known data quirks.
+- `NeutralLoss.composition` is UNIMOD's raw string. Zero-loss entries use `"0"`, which
+  `_formula` treats as no atoms: `dict_composition` is `{}` and `proforma_formula` is `""`.
+  One loss uses `"Water"`, which is not expanded. Treat it as a known data quirk.
 - `_formula.MONOSACCHARIDE_FORMULAS` holds residue (minus water) formulas; unknown tokens
   are kept verbatim as keys.
 - Changing the MCP major version is breaking for the `server` extra (0.2.0 moved from
   FastMCP/mcp 1.x to `MCPServer`/mcp 2.x).
-- `scripts/print_entries.py` and `scripts/audit_obo.py` default to `UNIMOD.obo` at the repo
-  root, which does not exist. Pass the path: `uv run python scripts/audit_obo.py src/unimodpy/data/UNIMOD.obo`.
 - Vercel: without `installCommand` the runtime installs from `pyproject.toml`/`uv.lock`
   with no extras and every request fails with `ModuleNotFoundError: fastapi`. A
   catch-all rewrite to `/api/index` makes every request 404. Keep both as they are.

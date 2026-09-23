@@ -7,7 +7,7 @@ from pathlib import Path
 
 from unimodpy import parse_obo
 
-OBO_PATH = Path(__file__).parent.parent / "UNIMOD.obo"
+OBO_PATH = Path(__file__).parent.parent / "src" / "unimodpy" / "data" / "UNIMOD.obo"
 
 
 def print_entry(entry) -> None:

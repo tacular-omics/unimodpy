@@ -108,7 +108,7 @@ class NeutralLoss:
 
         Produces a string like ``C2H2O`` or ``H-1NO-1`` that can be wrapped in
         ``[Formula:...]`` for a full ProForma term.  Monosaccharide abbreviations
-        are expanded to atoms; isotope labels are preserved (e.g. ``13C2H52H``).
+        are expanded to atoms; isotope labels are bracketed (e.g. ``[13C2]H5[2H]``).
 
         Returns None when delta_composition is absent.
         """
@@ -218,7 +218,7 @@ class UnimodEntry:
 
         Produces a string like ``C2H2O`` or ``H-1NO-1`` that can be wrapped in
         ``[Formula:...]`` for a full ProForma term.  Monosaccharide abbreviations
-        are expanded to atoms; isotope labels are preserved (e.g. ``13C2H52H``).
+        are expanded to atoms; isotope labels are bracketed (e.g. ``[13C2]H5[2H]``).
 
         Returns None when delta_composition is absent.
         """
