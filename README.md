@@ -76,8 +76,9 @@ for spec in entry.specificities[:1]:
 db = unimodpy.load(refresh=True)
 
 # Or just download the file
-path = unimodpy.download()                     # ~/.cache/unimodpy/UNIMOD.obo
+path = unimodpy.download()                     # ~/.cache/unimodpy/UNIMOD.obo (reused if present)
 path = unimodpy.download("/my/dir/UNIMOD.obo")  # custom destination
+path = unimodpy.download(force=True)           # always re-download
 
 # Write every entry to TSV (or CSV)
 db.write_tsv("unimod.tsv")
@@ -116,17 +117,18 @@ claude mcp add unimod http://localhost:8000/mcp --transport http
 | Symbol | Description |
 |--------|-------------|
 | `load(source=None, *, refresh=False)` | Load the database. No args → bundled file. `refresh=True` → download first. |
-| `download(dest=None)` | Download latest OBO from unimod.org; returns `Path`. |
+| `download(dest=None, *, force=False)` | Download latest OBO from unimod.org; returns `Path`. An existing file is reused unless `force=True`. |
 | `parse_obo(path)` | Low-level: parse any OBO file at `path`. |
 | `write_tsv(entries, path, *, delimiter)` | Write entries to a TSV (or CSV) file. |
 | `write_obo(entries, path, *, header_lines)` | Write entries back to UNIMOD OBO format. |
 | `UnimodDatabase` | Iterable collection with `get_by_id`, `get_by_name`, `search`, `write_tsv()`, `write_obo()`, `__getitem__`. Also exposes `header_lines`. |
-| `UnimodEntry` | Frozen dataclass for one modification term. Includes `definition_ref`. |
+| `UnimodEntry` | Frozen dataclass for one modification term. Includes `definition_ref` (bracketless, `""` if none). |
 | `Specificity` | Frozen dataclass for one site/position rule. |
 | `NeutralLoss` | Frozen dataclass for one neutral loss. |
 | `Site` | `StrEnum` of amino acid residues and termini. |
 | `Position` | `StrEnum` of sequence position constraints. |
 | `Classification` | `StrEnum` of modification classes. |
+| `UnimodError`, `UnimodParseError` | Package exceptions; `UnimodParseError` is also a `ValueError`. |
 
 </details>
 

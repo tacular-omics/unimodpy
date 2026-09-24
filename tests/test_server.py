@@ -119,7 +119,7 @@ def test_get_by_id_returns_structured_content(mcp_client: TestClient) -> None:
     assert entry is not None
     UnimodEntry.model_validate(entry)
     assert entry["accession"] == "UNIMOD:1"
-    assert "is_a" not in entry, "old is_a key leaked into response"
+    assert "is_a" in entry, "parent is exposed as is_a on the wire (1.0)"
     assert "record_id" not in entry, "internal record_id leaked into response"
     assert "date_time_posted" not in entry
     assert isinstance(entry["references"], list)
@@ -174,6 +174,42 @@ def test_search_returns_summaries_not_full_entries(mcp_client: TestClient) -> No
         assert "specificities" not in item
         assert "definition" not in item
         assert "references" not in item
+
+
+@pytest.mark.parametrize("args", [{"query": ""}, {"query": "acetyl", "limit": 0}, {"query": "acetyl", "limit": 501}])
+def test_search_rejects_out_of_range_arguments(mcp_client: TestClient, args: dict) -> None:
+    _mcp(mcp_client, "initialize", _INIT_PARAMS)
+    resp = _mcp(mcp_client, "tools/call", {"name": "search", "arguments": args}, req_id=2)
+    assert resp["result"]["isError"] is True
+
+
+def test_search_accepts_limit_bounds(mcp_client: TestClient) -> None:
+    _mcp(mcp_client, "initialize", _INIT_PARAMS)
+    resp = _mcp(mcp_client, "tools/call", {"name": "search", "arguments": {"query": "a", "limit": 500}}, req_id=2)
+    assert len(resp["result"]["structuredContent"]["result"]) == 500
+
+
+def test_entry_wire_uses_is_a_with_deprecated_parent_id() -> None:
+    with TestClient(app) as client:
+        body = client.get("/api/entries/1").json()
+    assert body["is_a"] == 0
+    assert body["parent_id"] == body["is_a"]
+    model = UnimodEntry.model_validate(body)
+    with pytest.warns(DeprecationWarning):
+        _ = model.parent_id
+
+
+def test_unparseable_id_is_404() -> None:
+    with TestClient(app) as client:
+        for bad in ("foo", "UNIMOD:", "true"):
+            assert client.get(f"/api/entries/{bad}").status_code == 404
+
+
+def test_health_is_typed() -> None:
+    from unimodpy.server.models import HealthResponse
+
+    with TestClient(app) as client:
+        HealthResponse.model_validate(client.get("/api/health").json())
 
 
 # ---------------------------------------------------------------------------

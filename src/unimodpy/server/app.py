@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, Response
 from mcp.server import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
+from pydantic import Field
 
 import unimodpy
 from unimodpy.server.dashboard import dashboard_entries
 from unimodpy.server.models import (
     EntryListResponse,
+    HealthResponse,
     SearchResponse,
     UnimodEntry,
     UnimodSummary,
@@ -83,11 +86,13 @@ def _build_mcp() -> MCPServer:
         return to_unimod_entry(entry, include_hidden=include_hidden)
 
     @mcp.tool()
-    def search(query: str, limit: int = 25) -> list[UnimodSummary]:
+    def search(
+        query: Annotated[str, Field(min_length=1)], limit: Annotated[int, Field(ge=1, le=500)] = 25
+    ) -> list[UnimodSummary]:
         """Full-text search over name, definition, and synonyms.
 
-        Returns up to ``limit`` lightweight summaries.  Call ``get_by_id`` on
-        any returned ``id`` to fetch the full entry.
+        ``query`` must be non-empty. Returns up to ``limit`` (1-500) lightweight
+        summaries.  Call ``get_by_id`` on any returned ``id`` to fetch the full entry.
         """
         return [to_unimod_summary(e) for e in _db.search(query)[:limit]]
 
@@ -141,14 +146,9 @@ def dashboard_data() -> Response:
     )
 
 
-@app.get("/api/health")
-def health() -> dict:
-    return {
-        "ok": True,
-        "package": _PACKAGE,
-        "version": unimodpy.__version__,
-        "count": len(_db),
-    }
+@app.get("/api/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(ok=True, package=_PACKAGE, version=unimodpy.__version__, count=len(_db))
 
 
 @app.get("/api/entries", response_model=EntryListResponse)

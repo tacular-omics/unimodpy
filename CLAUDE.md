@@ -55,6 +55,7 @@ src/unimodpy/
                    UnimodEntry frozen slots dataclasses (dict_composition, proforma_formula)
   parser.py        parse_obo(path) -> UnimodDatabase (streams [Term] blocks); load()
   database.py      UnimodDatabase: id/name indexes, search, __getitem__, write_tsv/write_obo
+  errors.py        UnimodError, UnimodParseError
   _formula.py      delta_composition parsing (monosaccharide expansion, isotopes) + Hill formula
   _download.py     download() from http://www.unimod.org/obo/unimod.obo to ~/.cache/unimodpy/
   _tabular.py      write_tsv (TSV/CSV, one row per entry, specificities joined with "; ")
@@ -95,7 +96,8 @@ import time and converts dataclasses to pydantic models per response.
 | `GET /docs`, `/redoc`, `/openapi.json` | FastAPI defaults |
 
 MCP tools (server name `unimodpy`): `get_by_id(id, include_hidden=False)`,
-`get_by_name(name, include_hidden=False)`, `search(query, limit=25)`. All return typed
+`get_by_name(name, include_hidden=False)`, `search(query, limit=25)` (query non-empty,
+limit 1-500). All return typed
 pydantic output (`structuredContent` + `outputSchema`). Hidden specificities are
 dropped unless `include_hidden=True` (Phospho: 2 visible, 8 total).
 
@@ -106,12 +108,13 @@ Connecting a client: `claude mcp add unimod https://unimod.tacular.dev/mcp --tra
 
 From `unimodpy/__init__.py`:
 
-- Loading: `load(source=None, *, refresh=False)`, `parse_obo(path)`, `download(dest=None)`
+- Loading: `load(source=None, *, refresh=False)`, `parse_obo(path)`, `download(dest=None, *, force=False)`
 - Writing: `write_tsv(entries, path, *, delimiter="\t")`, `write_obo(entries, path, *, header_lines=())`
 - Database: `UnimodDatabase` (`get_by_id`, `get_by_name`, `search`, `db[...]`, `len`, iteration,
   `write_tsv`, `write_obo`, `header_lines`)
 - Models: `UnimodEntry`, `Specificity`, `NeutralLoss`
-- Enums: `Site` (23), `Position` (5), `Classification` (14)
+- Enums: `Site` (23), `Position` (5), `Classification` (14); unknown upstream values stay raw `str` (warning)
+- Errors: `UnimodError`, `UnimodParseError(UnimodError, ValueError)` (`errors.py`)
 - `__version__`
 
 `unimodpy.server` (extra): `app`, `mcp`; `unimodpy.server.models` holds the wire models.

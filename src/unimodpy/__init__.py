@@ -4,6 +4,7 @@ from unimodpy._download import download
 from unimodpy._obo_writer import write_obo
 from unimodpy._tabular import write_tsv
 from unimodpy.database import UnimodDatabase
+from unimodpy.errors import UnimodError, UnimodParseError
 from unimodpy.models import Classification, NeutralLoss, Position, Site, Specificity, UnimodEntry
 from unimodpy.parser import load, parse_obo
 
@@ -18,6 +19,8 @@ __all__ = [
     "Specificity",
     "UnimodEntry",
     "UnimodDatabase",
+    "UnimodError",
+    "UnimodParseError",
     "download",
     "load",
     "parse_obo",
