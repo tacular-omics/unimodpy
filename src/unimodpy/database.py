@@ -5,8 +5,31 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
+from unimodpy._mass import (
+    WHERE_ANY_C,
+    WHERE_ANY_N,
+    WHERE_ANYWHERE,
+    WHERE_PROTEIN_C,
+    WHERE_PROTEIN_N,
+    MassIndex,
+    Slot,
+)
 from unimodpy.errors import UnimodError, UnimodKeyError
-from unimodpy.models import UnimodEntry
+from unimodpy.models import Position, Site, UnimodEntry
+
+_WHERE = {
+    Position.ANYWHERE: WHERE_ANYWHERE,
+    Position.ANY_N_TERM: WHERE_ANY_N,
+    Position.ANY_C_TERM: WHERE_ANY_C,
+    Position.PROTEIN_N_TERM: WHERE_PROTEIN_N,
+    Position.PROTEIN_C_TERM: WHERE_PROTEIN_C,
+}
+
+
+def _slots(entry: UnimodEntry) -> tuple[Slot, ...]:
+    """Where ``entry`` may sit, for search_mass: one slot per specificity (hidden ones too)."""
+    return tuple((frozenset({str(s.site)}), _WHERE.get(s.position, WHERE_ANYWHERE)) for s in entry.specificities)
+
 
 # Joins the lowercased search fields of one entry. A query without this character can
 # only match inside one field, so one substring test replaces one test per field.
@@ -49,6 +72,12 @@ class UnimodDatabase:
 
         # (entry, lowercased name/definition/synonyms joined by _SEP), in file order, for search().
         self._haystacks: list[tuple[UnimodEntry, str]] = [(e, _haystack(e)) for e in self._entries]
+        self._mass_index: MassIndex[UnimodEntry] | None = None
+        # site value ("S", "N-term") -> entries with a specificity there, in file order.
+        self._by_site: dict[str, list[UnimodEntry]] = {}
+        for e in self._entries:
+            for site in dict.fromkeys(str(s.site) for s in e.specificities):
+                self._by_site.setdefault(site, []).append(e)
 
     def get_by_id(self, id: int | str) -> UnimodEntry | None:
         """Return the entry for the given ID, or None if not found.
@@ -93,6 +122,66 @@ class UnimodDatabase:
             # Rare: the query could span two joined fields, so test each field.
             return [e for e in self._entries if any(q in f for f in _fields(e))]
         return [entry for entry, haystack in self._haystacks if q in haystack]
+
+    def search_mass(
+        self,
+        delta: float,
+        *,
+        tolerance: float = 0.01,
+        unit: str = "da",
+        site: str | None = None,
+        position: str | None = None,
+    ) -> list[tuple[UnimodEntry, float]]:
+        """Return ``(entry, error)`` pairs whose delta mass is within ``tolerance`` of ``delta``.
+
+        The mass is the monoisotopic delta mass, ``delta_mono_mass``.
+        ``error`` is ``delta - mass`` in Da (positive when ``delta`` is heavier). Pairs are
+        sorted by ``abs(error)``, ties in mass order then database order. Entries without
+        ``delta_mono_mass`` are skipped. The mass index is sorted once, on the first call, and
+        searched with bisect.
+
+        Args:
+            delta: Observed monoisotopic mass shift in Da; may be negative.
+            tolerance: Window half-width in Da; both edges are inclusive (with a 1e-9 relative
+                slack for float rounding), and ``0`` means an exact match.
+            unit: Only ``"da"`` (the default), exact and lowercase; anything else raises.
+                ppm is not offered: a ppm window on a delta mass is ill-defined (relative
+                to the delta, or to the modified peptide's mass?). The keyword is kept so
+                the call matches ``tacular.tolerance``; other units may be added later.
+            site: Residue letter(s) the modification sits on, e.g. ``"S"`` or ``"STY"``
+                (any of them), or ``"N-term"`` / ``"C-term"`` for a terminus modification.
+                Several letters mean any of them (``get_by_site`` takes exactly one residue).
+                Matched against each specificity's site, hidden ones included. A terminus
+                specificity (site ``N-term``) also matches a residue query when ``position``
+                puts the residue at that terminus.
+            position: Where the modified residue was observed: ``"anywhere"`` (inside the
+                sequence), ``"peptide n-term"``, ``"peptide c-term"``, ``"protein n-term"``
+                or ``"protein c-term"`` (case-insensitive). Keeps entries allowed there;
+                a modification allowed anywhere is allowed at a terminus too. Matched against the
+                position of the same specificity as ``site``.
+
+        Raises:
+            UnimodError: ``delta`` or ``tolerance`` is not a finite number (or ``tolerance`` < 0),
+                or ``unit``, ``site`` or ``position`` is not one of the values above.
+        """
+        if self._mass_index is None:
+            self._mass_index = MassIndex((e, e.delta_mono_mass, _slots(e)) for e in self._entries)
+        return self._mass_index.search(
+            delta, tolerance=tolerance, unit=unit, site=site, position=position, error=UnimodError
+        )
+
+    def get_by_site(self, site: str) -> list[UnimodEntry]:
+        """Return entries with a specificity (hidden ones included) at ``site``, in file order.
+
+        ``site`` is a residue letter (case-insensitive) or ``"N-term"`` / ``"C-term"``.
+        Like psimodpy's ``get_by_origin``; an unknown site or a non-string returns ``[]``.
+        Takes exactly one residue; ``search_mass(site=...)`` takes several letters (any of them).
+        """
+        if not isinstance(site, str):
+            return []
+        text = site.strip()
+        key = {"n-term": Site.N_TERM.value, "c-term": Site.C_TERM.value}.get(text.lower(), text.upper())
+        return list(self._by_site.get(key, []))
 
     def get(self, key: object, default: UnimodEntry | None = None) -> UnimodEntry | None:
         """Return ``db[key]``, or ``default`` if it would raise. Never raises."""
