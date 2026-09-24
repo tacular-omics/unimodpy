@@ -96,11 +96,11 @@ def parse_delta_composition(delta_composition: str) -> dict[str, int]:
     return {k: v for k, v in counts.items() if v != 0}
 
 
-def _hill_sort_key(sym: str) -> tuple[int, int, str]:
+def _hill_sort_key(sym: str) -> tuple[int, int | str, int | str]:
     """Hill ordering: C < isotopes-of-C < H < isotopes-of-H < rest (alphabetical).
 
     Keeps isotopes of the same element grouped immediately after the natural
-    isotope, e.g. C, 13C, H, 2H, N, O, S.
+    isotope, e.g. C, 13C, H, 2H, N, 15N, O, 18O, S.
     """
     m = re.match(r"^(\d+)?([A-Z].*)$", sym)
     iso_num = int(m.group(1)) if m and m.group(1) else 0
@@ -111,7 +111,7 @@ def _hill_sort_key(sym: str) -> tuple[int, int, str]:
         case "H":
             return (1, iso_num, sym)
         case _:
-            return (2, iso_num, base)
+            return (2, base, iso_num)
 
 
 def to_proforma_formula(composition: dict[str, int]) -> str:

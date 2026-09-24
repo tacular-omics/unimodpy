@@ -2,8 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- `UnimodDatabase.get(key, default=None)`: returns `db[key]` or `default`, never raises, as in psimodpy and uniprotptmpy.
+- Tests recompute every entry's and every neutral loss's monoisotopic and average mass from its parsed composition against a frozen NIST table (pyteomics 5.0.1; generator in `tests/reference/`), plus Hypothesis property tests for the lookups. All 1551 compositions agree.
+
 ### Fixed
 
+- `proforma_formula` sorts an isotope next to its element: UNIMOD:214 is now `C4[13C3]H12N[15N]O`, was `C4[13C3]H12NO[15N]` (23 entries).
+- `db[key]` raises `KeyError` for a non-int/str key: `db[1.0]` used to return UNIMOD:1 while `1.0 in db` was False, and `db[[1]]` raised `TypeError`. `get_by_id` returns None for such keys. Id strings may have surrounding whitespace (`" UNIMOD:1 "`).
 - `key in db` now accepts every key `db[key]` accepts (integer ID, `"UNIMOD:1"`, `"1"`, case-insensitive name) and returns `False` for unknown keys. It used to iterate entries, so `"Acetyl" in db` was `False`. Membership of a `UnimodEntry` object still works.
 - The composition token `Water` (neutral loss of UNIMOD:1010) expands to `H2O` in `dict_composition` and `proforma_formula`; it used to be kept as a literal `Water` key.
 
