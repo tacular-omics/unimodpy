@@ -264,11 +264,16 @@ def load(source: Path | str | None = None, *, refresh: bool = False) -> UnimodDa
     Args:
         source:  Path to an OBO file. If omitted, uses the bundled file.
         refresh: Download the latest OBO from unimod.org (``download(force=True)``)
-                 before loading. Ignored when *source* is given explicitly.
+                 and load it instead of the bundled file.
 
     Returns:
         A :class:`UnimodDatabase` ready for lookups.
+
+    Raises:
+        ValueError: both *source* and ``refresh=True`` were given.
     """
+    if source is not None and refresh:
+        raise ValueError("pass either source or refresh=True, not both")
     if source is not None:
         return parse_obo(source)
     if refresh:

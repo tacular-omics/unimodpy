@@ -21,7 +21,7 @@ pip install "unimodpy[server]"    # + fastapi, uvicorn, mcp>=2.1.1,<3
 uv add unimodpy
 ```
 
-The UNIMOD OBO file (1,552 terms including the root node `UNIMOD:0`) ships inside the
+The UNIMOD OBO file (1,561 terms including the root node `UNIMOD:0`) ships inside the
 wheel at `unimodpy/data/UNIMOD.obo`. Nothing touches the network unless you ask for a
 refresh.
 
@@ -31,7 +31,7 @@ refresh.
 import unimodpy
 
 db = unimodpy.load()                      # bundled database
-len(db)                                   # 1552
+len(db)                                   # 1561
 
 acetyl = db.get_by_id(1)                  # int, "1", "UNIMOD:1" or "unimod:1"
 acetyl.name, acetyl.delta_mono_mass       # ('Acetyl', 42.010565)
@@ -55,8 +55,8 @@ Everything below is importable from `unimodpy` (`unimodpy.__all__`).
 
 `load(source: Path | str | None = None, *, refresh: bool = False) -> UnimodDatabase`
 : Load the database. No arguments: the bundled OBO. `source`: parse that OBO file.
-  `refresh=True`: call `download(force=True)` first and parse the fresh file. `refresh`
-  is ignored when `source` is given.
+  `refresh=True`: call `download(force=True)` first and parse the fresh file. Passing
+  both `source` and `refresh=True` raises `ValueError`.
 
 `parse_obo(path: Path | str) -> UnimodDatabase`
 : Parse any UNIMOD-format OBO file. Streams `[Term]` blocks; keeps the header lines
@@ -68,7 +68,7 @@ Everything below is importable from `unimodpy` (`unimodpy.__all__`).
   with the same id raise `UnimodError`.
 
 `download(dest: Path | str | None = None, *, force: bool = False) -> Path`
-: Download `http://www.unimod.org/obo/unimod.obo` to `dest` (default
+: Download `https://www.unimod.org/obo/unimod.obo` to `dest` (default
   `~/.cache/unimodpy/UNIMOD.obo`), creating parent directories. Returns the path. An
   existing `dest` is returned as is unless `force=True`. Network errors propagate from
   `urllib`; a failed download leaves no partial file.
@@ -101,15 +101,15 @@ is raised for a malformed OBO file. Both live in `unimodpy.errors` and are expor
 
 | member | purpose |
 |---|---|
-| `get_by_id(id: int \| str) -> UnimodEntry \| None` | int, `"21"`, `"UNIMOD:21"` (prefix case-insensitive); non-numeric string or `bool` -> `None` |
-| `get_by_name(name: str) -> UnimodEntry \| None` | exact name, case-insensitive; if names collide the first entry in file order wins |
-| `search(query: str) -> list[UnimodEntry]` | case-insensitive substring over name, definition, synonyms; file order |
+| `get_by_id(id: int \| str) -> UnimodEntry \| None` | int, `"21"`, `"UNIMOD:21"` (prefix case-insensitive); the number must be plain ASCII digits (`"2_1"`, `"+21"` -> `None`); other strings or `bool` -> `None` |
+| `get_by_name(name: str) -> UnimodEntry \| None` | exact name, case-insensitive; if names collide the first entry in file order wins; non-`str` -> `None` |
+| `search(query: str) -> list[UnimodEntry]` | case-insensitive substring over name, definition, synonyms; file order; non-`str` -> `[]` |
 | `db[key]` | `get_by_id(key)`, else `get_by_name(key)` for a string, else `KeyError` (also for non-int/str keys) |
 | `db.get(key, default=None)` | `db[key]`, or `default` instead of `KeyError` |
 | `len(db)`, `iter(db)` | count and file-order iteration |
 | `write_tsv(path, *, delimiter="\t") -> Path` | as the module function |
 | `write_obo(path) -> Path` | as the module function, reusing `db.header_lines` |
-| `header_lines: tuple[str, ...]` | OBO header, e.g. `('format-version: 1.4', 'date: 17:06:2025 11:31', ...)` |
+| `header_lines: tuple[str, ...]` | OBO header, e.g. `('format-version: 1.4', 'date: 17:02:2026 11:36', ...)` |
 
 ### UnimodEntry (frozen, slots)
 
@@ -132,7 +132,10 @@ is raised for a malformed OBO file. Both live in `unimodpy.errors` and are expor
 
 Properties:
 
+- `accession -> str`: `"UNIMOD:21"`, the same string as the server's `accession`.
 - `dict_composition -> dict[str, int] | None`: `delta_composition` expanded to elements.
+  A malformed token (`"H(2"`, `"H(x)"`) or one that is neither an element nor a known
+  monosaccharide (`"Foo(2)"`) raises `UnimodParseError`.
   Monosaccharide abbreviations (`Hex`, `HexNAc`, `HexA`, `dHex`, `NeuAc`, `NeuGc`, `Pent`,
   `HexN`, `Kdn`, `Hep`, `Sulf`, `sulfate`, `Ac`, `Me`, `Su`) expand to residue formulas;
   isotopes stay separate keys (`"13C"`, `"2H"`, `"15N"`); counts may be negative; zero
@@ -264,13 +267,13 @@ the bundled database once at import.
 
 | method + path | query params | returns |
 |---|---|---|
-| `GET /api/health` | | `{"ok": true, "package": "unimodpy", "version": "0.2.1", "count": 1552}` |
+| `GET /api/health` | | `{"ok": true, "package": "unimodpy", "version": "0.2.1", "count": 1561}` |
 | `GET /api/entries` | `limit` 1-500 (50), `offset` >= 0 (0), `include_hidden` (false) | `{total, limit, offset, items: [UnimodEntry]}`; starts with the root node id 0 |
 | `GET /api/entries/{id}` | `include_hidden` | `UnimodEntry`; `id` is `21` or `UNIMOD:21`; 404 `{"detail": "No entry for id='...'"}` |
 | `GET /api/entries/by-name/{name}` | `include_hidden` | `UnimodEntry`; exact, case-insensitive; 404 if missing |
 | `GET /api/search` | `q` (required, min length 1), `limit` 1-500 (50) | `{query, total, limit, items: [UnimodSummary]}` |
 | `GET /` | | browser dashboard HTML (404 when `docs/index.html` is not on disk, e.g. a pip install) |
-| `GET /data.json` | | dashboard payload: list of 1,551 entries (root node excluded) |
+| `GET /data.json` | | dashboard payload: list of 1,560 entries (root node excluded) |
 | `GET /docs`, `/redoc`, `/openapi.json` | | FastAPI OpenAPI docs |
 | `POST /mcp` | | MCP (below) |
 
@@ -279,8 +282,7 @@ Out-of-range query values return 422.
 Wire models (`unimodpy.server.models`, pydantic):
 
 - `UnimodEntry`: `id`, `accession` (`"UNIMOD:21"`), `name`, `definition` (`None` if empty),
-  `references: [Reference]`, `synonyms`, `comment`, `is_a` (parent id; `parent_id` is a
-  deprecated duplicate, removed in 2.0),
+  `references: [Reference]`, `synonyms`, `comment`, `is_a` (parent id),
   `delta_mono_mass`, `delta_avge_mass`, `delta_composition`, `proforma_formula`,
   `dict_composition`, `approved`, `specificities: [Specificity]`.
   Hidden specificities are removed unless `include_hidden=true`.
@@ -351,7 +353,7 @@ curl -s -X POST https://unimod.tacular.dev/mcp \
   which expands to `H2O`.
 - `approved` reflects UNIMOD's own flag; many common modifications (e.g. Oxidation) are
   `False`.
-- `load(refresh=True)` needs network access to `http://www.unimod.org`; the bundled file
+- `load(refresh=True)` needs network access to `https://www.unimod.org`; the bundled file
   is a snapshot (see `db.header_lines` for its date).
 - The dashboard route `/` only works when `docs/index.html` is present (repo checkout or
   the Vercel bundle), not from an installed wheel.

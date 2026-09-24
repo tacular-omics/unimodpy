@@ -4,7 +4,7 @@
 > mass-spectrometry modifications database, with the full database bundled for
 > offline use, plus an optional FastAPI REST + MCP server (hosted at unimod.tacular.dev).
 
-`import unimodpy; db = unimodpy.load()` returns a `UnimodDatabase` of 1,552 terms.
+`import unimodpy; db = unimodpy.load()` returns a `UnimodDatabase` of 1,561 terms.
 Look up by ID (`db.get_by_id(1)` or `"UNIMOD:1"`), exact case-insensitive name
 (`db.get_by_name("Phospho")`), or substring search over names, definitions and synonyms
 (`db.search("glycosyl")`). Each `UnimodEntry` carries masses, the raw

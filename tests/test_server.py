@@ -189,19 +189,17 @@ def test_search_accepts_limit_bounds(mcp_client: TestClient) -> None:
     assert len(resp["result"]["structuredContent"]["result"]) == 500
 
 
-def test_entry_wire_uses_is_a_with_deprecated_parent_id() -> None:
+def test_entry_wire_uses_is_a_without_parent_id() -> None:
     with TestClient(app) as client:
         body = client.get("/api/entries/1").json()
     assert body["is_a"] == 0
-    assert body["parent_id"] == body["is_a"]
-    model = UnimodEntry.model_validate(body)
-    with pytest.warns(DeprecationWarning):
-        _ = model.parent_id
+    assert "parent_id" not in body
+    assert "parent_id" not in UnimodEntry.model_fields
 
 
 def test_unparseable_id_is_404() -> None:
     with TestClient(app) as client:
-        for bad in ("foo", "UNIMOD:", "true"):
+        for bad in ("foo", "UNIMOD:", "true", "2_1", "UNIMOD:2_1", "+21", "\u0662\u0661"):
             assert client.get(f"/api/entries/{bad}").status_code == 404
 
 
