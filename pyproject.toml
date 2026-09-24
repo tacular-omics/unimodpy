@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Patrick Garrett", email = "pgarrett@scripps.edu" }
 ]
@@ -16,11 +17,11 @@ keywords = ["unimod", "proteomics", "mass spectrometry", "modifications", "OBO",
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Chemistry",
     "Typing :: Typed",
@@ -35,6 +36,7 @@ server = [
 
 [project.urls]
 Homepage = "https://github.com/tacular-omics/unimodpy"
+Documentation = "https://github.com/tacular-omics/unimodpy#readme"
 Repository = "https://github.com/tacular-omics/unimodpy"
 Issues = "https://github.com/tacular-omics/unimodpy/issues"
 Changelog = "https://github.com/tacular-omics/unimodpy/blob/main/CHANGELOG.md"
