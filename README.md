@@ -116,7 +116,7 @@ claude mcp add unimod http://localhost:8000/mcp --transport http
 
 | Symbol | Description |
 |--------|-------------|
-| `load(source=None, *, refresh=False)` | Load the database. No args → bundled file. `refresh=True` → download first (not together with `source`: `ValueError`). |
+| `load(source=None, *, refresh=False, cache=False)` | Load the database. No args → bundled file. `refresh=True` → download first (not together with `source`: `ValueError`). `cache=True` → parse the bundled file once and return the same (read-only) database on later calls. |
 | `download(dest=None, *, force=False)` | Download latest OBO from unimod.org; returns `Path`. An existing file is reused unless `force=True`. |
 | `parse_obo(path)` | Low-level: parse any OBO file at `path`. |
 | `write_tsv(entries, path, *, delimiter)` | Write entries to a TSV (or CSV) file. |
@@ -128,7 +128,7 @@ claude mcp add unimod http://localhost:8000/mcp --transport http
 | `Site` | `StrEnum` of amino acid residues and termini. |
 | `Position` | `StrEnum` of sequence position constraints. |
 | `Classification` | `StrEnum` of modification classes. |
-| `UnimodError`, `UnimodParseError` | Package exceptions; `UnimodParseError` is also a `ValueError`. |
+| `UnimodError`, `UnimodParseError`, `UnimodKeyError` | Package exceptions; `UnimodParseError` is also a `ValueError`, `UnimodKeyError` (raised by `db[key]` on a miss) is also a `KeyError`. |
 
 </details>
 

@@ -5,8 +5,22 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
-from unimodpy.errors import UnimodError
+from unimodpy.errors import UnimodError, UnimodKeyError
 from unimodpy.models import UnimodEntry
+
+# Joins the lowercased search fields of one entry. A query without this character can
+# only match inside one field, so one substring test replaces one test per field.
+_SEP = "\x00"
+
+
+def _fields(entry: UnimodEntry) -> list[str]:
+    """Return the lowercased name, definition and synonyms of ``entry``: the fields search() looks in."""
+    return [entry.name.lower(), entry.definition.lower(), *(s.lower() for s in entry.synonyms)]
+
+
+def _haystack(entry: UnimodEntry) -> str:
+    """Return ``_fields(entry)`` joined by ``_SEP``."""
+    return _SEP.join(_fields(entry))
 
 
 class UnimodDatabase:
@@ -32,6 +46,9 @@ class UnimodDatabase:
             self._by_id[entry.id] = entry
             # Duplicate names: the first entry keeps the name (see get_by_name).
             self._by_name_lower.setdefault(entry.name.lower(), entry)
+
+        # (entry, lowercased name/definition/synonyms joined by _SEP), in file order, for search().
+        self._haystacks: list[tuple[UnimodEntry, str]] = [(e, _haystack(e)) for e in self._entries]
 
     def get_by_id(self, id: int | str) -> UnimodEntry | None:
         """Return the entry for the given ID, or None if not found.
@@ -72,11 +89,10 @@ class UnimodDatabase:
         if not isinstance(query, str):
             return []
         q = query.lower()
-        return [
-            entry
-            for entry in self._entries
-            if q in entry.name.lower() or q in entry.definition.lower() or any(q in s.lower() for s in entry.synonyms)
-        ]
+        if _SEP in q:
+            # Rare: the query could span two joined fields, so test each field.
+            return [e for e in self._entries if any(q in f for f in _fields(e))]
+        return [entry for entry, haystack in self._haystacks if q in haystack]
 
     def get(self, key: object, default: UnimodEntry | None = None) -> UnimodEntry | None:
         """Return ``db[key]``, or ``default`` if it would raise. Never raises."""
@@ -87,14 +103,14 @@ class UnimodDatabase:
 
     def __getitem__(self, key: object) -> UnimodEntry:
         """Return the entry by id (1, "1", "UNIMOD:1") or, failing that, by name
-        (case-insensitive). Raise KeyError for a missing or non-int/str key."""
+        (case-insensitive). Raise UnimodKeyError (a KeyError) for a missing or non-int/str key."""
         entry = None
         if isinstance(key, int | str):
             entry = self.get_by_id(key)
             if entry is None and isinstance(key, str):
                 entry = self.get_by_name(key)
         if entry is None:
-            raise KeyError(key)
+            raise UnimodKeyError(key)
         return entry
 
     def __contains__(self, key: object) -> bool:
