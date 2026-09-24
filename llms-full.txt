@@ -94,7 +94,8 @@ Everything below is importable from `unimodpy` (`unimodpy.__all__`).
 | `get_by_id(id: int \| str) -> UnimodEntry \| None` | int, `"21"`, `"UNIMOD:21"` (prefix case-insensitive); non-numeric string -> `None` |
 | `get_by_name(name: str) -> UnimodEntry \| None` | exact name, case-insensitive |
 | `search(query: str) -> list[UnimodEntry]` | case-insensitive substring over name, definition, synonyms; file order |
-| `db[key]` | `get_by_id(key)`, else `get_by_name(str(key))`, else `KeyError` |
+| `db[key]` | `get_by_id(key)`, else `get_by_name(key)` for a string, else `KeyError` (also for non-int/str keys) |
+| `db.get(key, default=None)` | `db[key]`, or `default` instead of `KeyError` |
 | `len(db)`, `iter(db)` | count and file-order iteration |
 | `write_tsv(path, *, delimiter="\t") -> Path` | as the module function |
 | `write_obo(path) -> Path` | as the module function, reusing `db.header_lines` |

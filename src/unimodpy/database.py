@@ -33,13 +33,15 @@ class UnimodDatabase:
         UNIMOD identifier string ("UNIMOD:1", case-insensitive).
         """
         if isinstance(id, str):
-            cleaned = id.upper().removeprefix("UNIMOD:")
+            cleaned = id.strip().upper().removeprefix("UNIMOD:")
             try:
                 n = int(cleaned)
             except ValueError:
                 return None
-        else:
+        elif isinstance(id, int):
             n = id
+        else:
+            return None
         return self._by_id.get(n)
 
     def get_by_name(self, name: str) -> UnimodEntry | None:
@@ -58,21 +60,30 @@ class UnimodDatabase:
             if q in entry.name.lower() or q in entry.definition.lower() or any(q in s.lower() for s in entry.synonyms)
         ]
 
-    def __getitem__(self, id: int | str) -> UnimodEntry:
-        entry = self.get_by_id(id)
+    def get(self, key: object, default: UnimodEntry | None = None) -> UnimodEntry | None:
+        """Return ``db[key]``, or ``default`` if it would raise. Never raises."""
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __getitem__(self, key: object) -> UnimodEntry:
+        """Return the entry by id (1, "1", "UNIMOD:1") or, failing that, by name
+        (case-insensitive). Raise KeyError for a missing or non-int/str key."""
+        entry = None
+        if isinstance(key, int | str):
+            entry = self.get_by_id(key)
+            if entry is None and isinstance(key, str):
+                entry = self.get_by_name(key)
         if entry is None:
-            entry = self.get_by_name(str(id))
-        if entry is None:
-            raise KeyError(id)
+            raise KeyError(key)
         return entry
 
     def __contains__(self, key: object) -> bool:
         """Return True if ``db[key]`` would succeed, or if key is an entry in this database."""
         if isinstance(key, UnimodEntry):
             return self._by_id.get(key.id) == key
-        if not isinstance(key, int | str):
-            return False
-        return self.get_by_id(key) is not None or self.get_by_name(str(key)) is not None
+        return self.get(key) is not None
 
     def __len__(self) -> int:
         return len(self._entries)

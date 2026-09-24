@@ -520,3 +520,37 @@ def test_water_neutral_loss_composition(db: UnimodDatabase) -> None:
     nl = next(nl for s in db[1010].specificities for nl in s.neutral_losses if nl.composition == "Water")
     assert nl.dict_composition == {"H": 2, "O": 1}
     assert nl.proforma_formula == "H2O"
+
+
+def test_proforma_formula_isotope_sorts_with_its_element(db: UnimodDatabase) -> None:
+    """An isotope of N, O, ... sorts next to its element, not after every natural element."""
+    from unimodpy._formula import to_proforma_formula
+
+    assert to_proforma_formula({"N": 1, "O": 1, "15N": 1}) == "N[15N]O"
+    assert db[214].proforma_formula == "C4[13C3]H12N[15N]O"
+
+
+# ---------------------------------------------------------------------------
+# Uniform lookup: [] / get / in agree, and match psimodpy and uniprotptmpy
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("key", [1, "1", "0001", "UNIMOD:1", "unimod:1", " UNIMOD:1 ", "Acetyl", "ACETYL"])
+def test_get_accepts_every_key_form(db: UnimodDatabase, key: object) -> None:
+    assert db.get(key) is db[1]
+    assert key in db
+
+
+@pytest.mark.parametrize("key", [99999, "UNIMOD:99999", "foo", "UNIMOD:abc", "", None, 1.0, 3.5, (1,), [1]])
+def test_get_missing_or_malformed_returns_default(db: UnimodDatabase, key: object) -> None:
+    assert db.get(key) is None
+    sentinel = object()
+    assert db.get(key, sentinel) is sentinel
+    assert key not in db
+    with pytest.raises(KeyError):
+        db[key]  # ty: ignore[invalid-argument-type]
+
+
+def test_get_by_id_non_int_or_str_returns_none(db: UnimodDatabase) -> None:
+    assert db.get_by_id(1.0) is None  # ty: ignore[invalid-argument-type]
+    assert db.get_by_id([1]) is None  # ty: ignore[invalid-argument-type]
