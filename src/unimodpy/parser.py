@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import re
 import warnings
 from enum import StrEnum
@@ -258,20 +259,37 @@ def parse_obo(path: Path | str) -> UnimodDatabase:
     return UnimodDatabase(entries, header_lines=tuple(header_lines))
 
 
-def load(source: Path | str | None = None, *, refresh: bool = False) -> UnimodDatabase:
+@functools.cache
+def _load_bundled() -> UnimodDatabase:
+    """Parse the bundled OBO once; backs ``load(cache=True)``."""
+    return load()
+
+
+def load(source: Path | str | None = None, *, refresh: bool = False, cache: bool = False) -> UnimodDatabase:
     """Load the UNIMOD database.
 
     Args:
         source:  Path to an OBO file. If omitted, uses the bundled file.
         refresh: Download the latest OBO from unimod.org (``download(force=True)``)
                  and load it instead of the bundled file.
+        cache:   If True, parse the bundled file only once per process and return
+                 that same database object on every later ``load(cache=True)`` call.
+                 The shared object is read-only in practice (entries are frozen and
+                 it has no mutating methods); do not reassign its attributes. Only
+                 for the bundled file: cannot be combined with *source* or *refresh*.
+                 Default False: a new database each call.
 
     Returns:
         A :class:`UnimodDatabase` ready for lookups.
 
     Raises:
-        ValueError: both *source* and ``refresh=True`` were given.
+        ValueError: both *source* and ``refresh=True`` were given, or ``cache=True``
+            was combined with either.
     """
+    if cache:
+        if source is not None or refresh:
+            raise ValueError("cache=True only applies to the bundled file; drop source and refresh")
+        return _load_bundled()
     if source is not None and refresh:
         raise ValueError("pass either source or refresh=True, not both")
     if source is not None:

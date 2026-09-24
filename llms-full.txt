@@ -53,10 +53,14 @@ Everything below is importable from `unimodpy` (`unimodpy.__all__`).
 
 ### Loading
 
-`load(source: Path | str | None = None, *, refresh: bool = False) -> UnimodDatabase`
+`load(source: Path | str | None = None, *, refresh: bool = False, cache: bool = False) -> UnimodDatabase`
 : Load the database. No arguments: the bundled OBO. `source`: parse that OBO file.
   `refresh=True`: call `download(force=True)` first and parse the fresh file. Passing
-  both `source` and `refresh=True` raises `ValueError`.
+  both `source` and `refresh=True` raises `ValueError`. `cache=True` (1.1): parse the
+  bundled file once per process and return that same database on every later
+  `load(cache=True)` call; treat it as read-only (entries are frozen; do not reassign its
+  attributes). `cache=True` with `source` or `refresh=True` raises `ValueError`. Without
+  it every `load()` parses anew.
 
 `parse_obo(path: Path | str) -> UnimodDatabase`
 : Parse any UNIMOD-format OBO file. Streams `[Term]` blocks; keeps the header lines
@@ -75,8 +79,11 @@ Everything below is importable from `unimodpy` (`unimodpy.__all__`).
 
 ### Errors
 
-`UnimodError(Exception)` is the base class; `UnimodParseError(UnimodError, ValueError)`
-is raised for a malformed OBO file. Both live in `unimodpy.errors` and are exported.
+`UnimodError(ValueError)` is the base class (a `ValueError` since 1.1);
+`UnimodParseError(UnimodError, ValueError)` is raised for a malformed OBO file;
+`UnimodKeyError(UnimodError, KeyError)` is raised by `db[key]` on a miss, so both
+`except KeyError` and `except UnimodError` catch it. All live in `unimodpy.errors` and
+are exported.
 
 ### Writing
 
@@ -104,7 +111,7 @@ is raised for a malformed OBO file. Both live in `unimodpy.errors` and are expor
 | `get_by_id(id: int \| str) -> UnimodEntry \| None` | int, `"21"`, `"UNIMOD:21"` (prefix case-insensitive); the number must be plain ASCII digits (`"2_1"`, `"+21"` -> `None`); other strings or `bool` -> `None` |
 | `get_by_name(name: str) -> UnimodEntry \| None` | exact name, case-insensitive; if names collide the first entry in file order wins; non-`str` -> `None` |
 | `search(query: str) -> list[UnimodEntry]` | case-insensitive substring over name, definition, synonyms; file order; non-`str` -> `[]` |
-| `db[key]` | `get_by_id(key)`, else `get_by_name(key)` for a string, else `KeyError` (also for non-int/str keys) |
+| `db[key]` | `get_by_id(key)`, else `get_by_name(key)` for a string, else `UnimodKeyError` (a `KeyError`; also for non-int/str keys) |
 | `db.get(key, default=None)` | `db[key]`, or `default` instead of `KeyError` |
 | `len(db)`, `iter(db)` | count and file-order iteration |
 | `write_tsv(path, *, delimiter="\t") -> Path` | as the module function |
@@ -343,7 +350,7 @@ curl -s -X POST https://unimod.tacular.dev/mcp \
 
 ## Gotchas
 
-- Lookups return `None`, not an exception; only `db[...]` raises `KeyError`.
+- Lookups return `None`, not an exception; only `db[...]` raises (`UnimodKeyError`, a `KeyError`).
 - `get_by_id` only accepts numbers or `UNIMOD:N`; `get_by_id("Acetyl")` is `None`. Use
   `db["Acetyl"]` if the key may be either.
 - `search` is plain substring matching, not fuzzy or ranked: `search("TMT")` returns 13

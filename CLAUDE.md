@@ -55,7 +55,7 @@ src/unimodpy/
                    UnimodEntry frozen slots dataclasses (dict_composition, proforma_formula)
   parser.py        parse_obo(path) -> UnimodDatabase (streams [Term] blocks); load()
   database.py      UnimodDatabase: id/name indexes, search, __getitem__, write_tsv/write_obo
-  errors.py        UnimodError, UnimodParseError
+  errors.py        UnimodError(ValueError), UnimodParseError, UnimodKeyError(UnimodError, KeyError)
   _formula.py      delta_composition parsing (monosaccharide expansion, isotopes) + Hill formula
   _download.py     download() from https://www.unimod.org/obo/unimod.obo to ~/.cache/unimodpy/
   _tabular.py      write_tsv (TSV/CSV, one row per entry, specificities joined with "; ")
@@ -108,13 +108,13 @@ Connecting a client: `claude mcp add unimod https://unimod.tacular.dev/mcp --tra
 
 From `unimodpy/__init__.py`:
 
-- Loading: `load(source=None, *, refresh=False)`, `parse_obo(path)`, `download(dest=None, *, force=False)`
+- Loading: `load(source=None, *, refresh=False, cache=False)`, `parse_obo(path)`, `download(dest=None, *, force=False)`
 - Writing: `write_tsv(entries, path, *, delimiter="\t")`, `write_obo(entries, path, *, header_lines=())`
 - Database: `UnimodDatabase` (`get_by_id`, `get_by_name`, `search`, `db[...]`, `len`, iteration,
   `write_tsv`, `write_obo`, `header_lines`)
 - Models: `UnimodEntry`, `Specificity`, `NeutralLoss`
 - Enums: `Site` (23), `Position` (5), `Classification` (14); unknown upstream values stay raw `str` (warning)
-- Errors: `UnimodError`, `UnimodParseError(UnimodError, ValueError)` (`errors.py`)
+- Errors: `UnimodError(ValueError)`, `UnimodParseError(UnimodError, ValueError)`, `UnimodKeyError(UnimodError, KeyError)` (`errors.py`)
 - `__version__`
 
 `unimodpy.server` (extra): `app`, `mcp`; `unimodpy.server.models` holds the wire models.
@@ -123,7 +123,7 @@ From `unimodpy/__init__.py`:
 
 - Python >= 3.12, ruff line length 120, rules E W F I B UP. `ty check src` must pass.
 - Models are `@dataclass(frozen=True, slots=True)`; collections are tuples. Keep them immutable.
-- Lookups return `None` when missing; only `db[...]` raises `KeyError`.
+- Lookups return `None` when missing; only `db[...]` raises (`UnimodKeyError`, a `KeyError`).
 - Short Google-style docstrings; type hints carry the types.
 - The server's wire shape is defined once in `server/models.py`, shared by REST and MCP.
   Change it there, not in `app.py`.
