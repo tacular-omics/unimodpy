@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import datetime
+import warnings
 from dataclasses import dataclass
 from enum import StrEnum
 
 from unimodpy._formula import parse_delta_composition, to_proforma_formula
+from unimodpy.errors import UnimodParseError
 
 
 class Site(StrEnum):
@@ -204,11 +206,19 @@ class UnimodEntry:
         labelled elements (2H, 13C) are kept as distinct keys.  Counts can be
         negative for modifications that remove atoms.
 
-        Returns None when delta_composition is absent (e.g. the root node).
+        Returns None when delta_composition is absent (e.g. the root node), or
+        when it cannot be parsed (a token this version does not know, such as a
+        new upstream monosaccharide); the latter also emits a ``UserWarning``.
         """
         if self.delta_composition is None:
             return None
-        return parse_delta_composition(self.delta_composition)
+        try:
+            return parse_delta_composition(self.delta_composition)
+        except UnimodParseError as exc:
+            warnings.warn(
+                f"UNIMOD:{self.id}: composition not parsed, returning None ({exc})", UserWarning, stacklevel=2
+            )
+            return None
 
     @property
     def proforma_formula(self) -> str | None:
@@ -218,7 +228,8 @@ class UnimodEntry:
         ``[Formula:...]`` for a full ProForma term.  Monosaccharide abbreviations
         are expanded to atoms; isotope labels are bracketed (e.g. ``[13C2]H5[2H]``).
 
-        Returns None when delta_composition is absent.
+        Returns None when delta_composition is absent or cannot be parsed (see
+        ``dict_composition``, which also warns).
         """
         comp = self.dict_composition
         if comp is None:

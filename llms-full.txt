@@ -135,7 +135,8 @@ Properties:
 - `accession -> str`: `"UNIMOD:21"`, the same string as the server's `accession`.
 - `dict_composition -> dict[str, int] | None`: `delta_composition` expanded to elements.
   A malformed token (`"H(2"`, `"H(x)"`) or one that is neither an element nor a known
-  monosaccharide (`"Foo(2)"`) raises `UnimodParseError`.
+  monosaccharide (`"Foo(2)"`) gives `None` plus a `UserWarning` (so does `proforma_formula`);
+  `unimodpy._formula.parse_delta_composition` itself raises `UnimodParseError`.
   Monosaccharide abbreviations (`Hex`, `HexNAc`, `HexA`, `dHex`, `NeuAc`, `NeuGc`, `Pent`,
   `HexN`, `Kdn`, `Hep`, `Sulf`, `sulfate`, `Ac`, `Me`, `Su`) expand to residue formulas;
   isotopes stay separate keys (`"13C"`, `"2H"`, `"15N"`); counts may be negative; zero
