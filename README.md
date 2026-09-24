@@ -58,6 +58,11 @@ phospho = db.get_by_name("Phospho")
 hits = db.search("glycosyl")
 print(len(hits))              # 6
 
+# Entries whose delta_mono_mass is within 0.01 Da of 79.966, on S, T or Y
+for entry, error in db.search_mass(79.966, site="STY"):
+    print(entry.name, round(error, 4))   # Phospho -0.0003, Sulfo 0.0092
+db.search_mass(79.966331, tolerance=5, unit="ppm")      # [(Phospho, ~0.0)]
+
 # Per-site specificity rules (position, classification, neutral losses)
 entry = db.get_by_name("Carbamidomethyl")
 print(entry.dict_composition)       # {'H': 3, 'C': 2, 'N': 1, 'O': 1}
