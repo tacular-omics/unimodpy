@@ -68,3 +68,36 @@ def test_parse_delta_composition_valid_still_parses() -> None:
     assert parse_delta_composition("Hex(1) Water") == {"C": 6, "H": 12, "O": 6}
     assert parse_delta_composition("0") == {}
     assert parse_delta_composition("") == {}
+
+
+def _unknown_token_entry():
+    from unimodpy import UnimodEntry
+
+    return UnimodEntry(id=99999, name="NewSugar", definition="", synonyms=(), delta_composition="H(2) Foo(1)")
+
+
+def test_unknown_composition_token_gives_none_and_warns() -> None:
+    entry = _unknown_token_entry()
+    with pytest.warns(UserWarning, match=r"UNIMOD:99999.*Foo"):
+        assert entry.dict_composition is None
+    with pytest.warns(UserWarning, match=r"UNIMOD:99999.*Foo") as record:
+        assert entry.proforma_formula is None
+    assert len(record) == 1, "one warning per property access"
+    with pytest.raises(UnimodParseError):
+        parse_delta_composition("H(2) Foo(1)")
+
+
+def test_server_and_dashboard_survive_unknown_composition_token() -> None:
+    pytest.importorskip("fastapi")
+    from unimodpy.server.dashboard import dashboard_entries
+    from unimodpy.server.models import to_unimod_entry, to_unimod_summary
+
+    entry = _unknown_token_entry()
+    with pytest.warns(UserWarning):
+        wire = to_unimod_entry(entry)
+    assert wire.proforma_formula is None and wire.dict_composition is None
+    with pytest.warns(UserWarning):
+        assert to_unimod_summary(entry).proforma_formula is None
+    with pytest.warns(UserWarning):
+        rows = dashboard_entries(UnimodDatabase([entry]))
+    assert rows[0]["proforma_formula"] is None

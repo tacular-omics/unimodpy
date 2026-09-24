@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from unimodpy._formula import to_proforma_formula
 from unimodpy.models import NeutralLoss as _NeutralLoss
 from unimodpy.models import Specificity as _Specificity
 from unimodpy.models import UnimodEntry as _UnimodEntry
@@ -135,6 +136,8 @@ def to_unimod_entry(entry: _UnimodEntry, *, include_hidden: bool = False) -> Uni
     # ever grows to import models.py at module scope itself.
     from unimodpy.server.references import parse_definition_ref
 
+    # Read the composition once: an unparseable one warns (once) and gives None for both fields.
+    composition = entry.dict_composition
     specs = entry.specificities
     if not include_hidden:
         specs = tuple(s for s in specs if not s.hidden)
@@ -151,8 +154,8 @@ def to_unimod_entry(entry: _UnimodEntry, *, include_hidden: bool = False) -> Uni
         delta_mono_mass=entry.delta_mono_mass,
         delta_avge_mass=entry.delta_avge_mass,
         delta_composition=entry.delta_composition,
-        proforma_formula=entry.proforma_formula,
-        dict_composition=entry.dict_composition,
+        proforma_formula=to_proforma_formula(composition) if composition is not None else None,
+        dict_composition=composition,
         approved=entry.approved,
         specificities=[_specificity(s) for s in specs],
     )
