@@ -61,7 +61,7 @@ print(len(hits))              # 6
 # Entries whose delta_mono_mass is within 0.01 Da of 79.966, on S, T or Y
 for entry, error in db.search_mass(79.966, site="STY"):
     print(entry.name, round(error, 4))   # Phospho -0.0003, Sulfo 0.0092
-db.search_mass(79.966331, tolerance=5, unit="ppm")      # [(Phospho, ~0.0)]
+db.search_mass(79.966331, tolerance=0.005)  # [(Phospho, ~0.0)]: Sulfo is 9.5 mDa away
 
 # Per-site specificity rules (position, classification, neutral losses)
 entry = db.get_by_name("Carbamidomethyl")
@@ -126,7 +126,8 @@ claude mcp add unimod http://localhost:8000/mcp --transport http
 | `parse_obo(path)` | Low-level: parse any OBO file at `path`. |
 | `write_tsv(entries, path, *, delimiter)` | Write entries to a TSV (or CSV) file. |
 | `write_obo(entries, path, *, header_lines)` | Write entries back to UNIMOD OBO format. |
-| `UnimodDatabase` | Iterable collection with `get_by_id`, `get_by_name`, `search`, `write_tsv()`, `write_obo()`, `__getitem__`. Also exposes `header_lines`. |
+| `UnimodDatabase` | Iterable collection with `get_by_id`, `get_by_name`, `search`, `get_by_site`, `search_mass`, `write_tsv()`, `write_obo()`, `__getitem__`. Also exposes `header_lines`. |
+| `UnimodDatabase.search_mass(delta, *, tolerance=0.01, unit="da", site=None, position=None)` | `(entry, delta - delta_mono_mass)` pairs within `tolerance` Da (edges inclusive), closest first. `site` may list several residues (`"STY"`); `get_by_site(site)` takes exactly one. |
 | `UnimodEntry` | Frozen dataclass for one modification term. Includes `definition_ref` (bracketless, `""` if none) and the `accession` property (`"UNIMOD:21"`). |
 | `Specificity` | Frozen dataclass for one site/position rule. |
 | `NeutralLoss` | Frozen dataclass for one neutral loss. |
