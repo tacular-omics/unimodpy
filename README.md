@@ -128,7 +128,7 @@ claude mcp add unimod http://localhost:8000/mcp --transport http
 | `write_obo(entries, path, *, header_lines)` | Write entries back to UNIMOD OBO format. |
 | `UnimodDatabase` | Iterable collection with `get_by_id`, `get_by_name`, `search`, `get_by_site`, `search_mass`, `write_tsv()`, `write_obo()`, `__getitem__`. Also exposes `header_lines`. |
 | `UnimodDatabase.search_mass(delta, *, tolerance=0.01, unit="da", site=None, position=None)` | `(entry, delta - delta_mono_mass)` pairs within `tolerance` Da (edges inclusive), closest first. `site` may list several residues (`"STY"`); `get_by_site(site)` takes exactly one. |
-| `UnimodEntry` | Frozen dataclass for one modification term. Includes `definition_ref` (bracketless, `""` if none) and the `accession` property (`"UNIMOD:21"`). |
+| `UnimodEntry` | Frozen dataclass for one modification term. Includes `definition_ref` (bracketless, `""` if none), the `accession` property (`"UNIMOD:21"`), and `get_mass(*, monoisotopic=True)` (`delta_mono_mass`, or `delta_avge_mass` with `monoisotopic=False`). |
 | `Specificity` | Frozen dataclass for one site/position rule. |
 | `NeutralLoss` | Frozen dataclass for one neutral loss. |
 | `Site` | `StrEnum` of amino acid residues and termini. |
