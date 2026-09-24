@@ -11,6 +11,15 @@ from unimodpy._formula import parse_delta_composition, to_proforma_formula
 from unimodpy.errors import UnimodParseError
 
 
+def _lenient_composition(composition: str, where: str) -> dict[str, int] | None:
+    """``parse_delta_composition``, or None plus one ``UserWarning`` naming *where* if it cannot be parsed."""
+    try:
+        return parse_delta_composition(composition)
+    except UnimodParseError as exc:
+        warnings.warn(f"{where}: composition not parsed, returning None ({exc})", UserWarning, stacklevel=3)
+        return None
+
+
 class Site(StrEnum):
     """Amino acid residue or terminus to which a modification can be applied."""
 
@@ -90,19 +99,22 @@ class NeutralLoss:
         return f"NL[{self.key}] {self.mono_mass:+.6f} Da  {self.composition}"
 
     @property
-    def dict_composition(self) -> dict[str, int]:
+    def dict_composition(self) -> dict[str, int] | None:
         """Expanded elemental composition of the lost group as {element: count}.
 
         Monosaccharide abbreviations are expanded to atoms and isotope-labelled
         elements are kept as distinct keys ("13C", "2H"). The zero-loss
-        composition ``"0"`` gives ``{}``.
+        composition ``"0"`` gives ``{}``. A composition this version cannot parse
+        (e.g. a new upstream monosaccharide) gives None and a ``UserWarning``.
         """
-        return parse_delta_composition(self.composition)
+        return _lenient_composition(self.composition, f"neutral loss {self.key}")
 
     @property
-    def proforma_formula(self) -> str:
-        """Hill-notation formula string of the lost group, e.g. ``HO3P``; ``""`` for a zero loss."""
-        return to_proforma_formula(self.dict_composition)
+    def proforma_formula(self) -> str | None:
+        """Hill-notation formula string of the lost group, e.g. ``HO3P``; ``""`` for a zero loss,
+        None if the composition cannot be parsed (see ``dict_composition``)."""
+        comp = self.dict_composition
+        return None if comp is None else to_proforma_formula(comp)
 
 
 @dataclass(frozen=True, slots=True)
@@ -212,13 +224,7 @@ class UnimodEntry:
         """
         if self.delta_composition is None:
             return None
-        try:
-            return parse_delta_composition(self.delta_composition)
-        except UnimodParseError as exc:
-            warnings.warn(
-                f"UNIMOD:{self.id}: composition not parsed, returning None ({exc})", UserWarning, stacklevel=2
-            )
-            return None
+        return _lenient_composition(self.delta_composition, self.accession)
 
     @property
     def proforma_formula(self) -> str | None:

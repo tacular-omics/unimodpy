@@ -152,8 +152,9 @@ From `unimodpy/__init__.py`:
   One loss (UNIMOD:1010) uses `"Water"`, which `MONOSACCHARIDE_FORMULAS` expands to `H2O`.
 - `_formula.MONOSACCHARIDE_FORMULAS` holds residue (minus water) formulas; any other token
   must be an element symbol (optionally isotope-prefixed, `13C`), else `parse_delta_composition`
-  raises `UnimodParseError`; `UnimodEntry.dict_composition`/`proforma_formula` turn that into
-  `None` + `UserWarning`. A new upstream monosaccharide must be added there.
+  raises `UnimodParseError`; `UnimodEntry` and `NeutralLoss` `dict_composition`/`proforma_formula` turn
+  that into `None` + `UserWarning` (via `models._lenient_composition`; the server names the
+  parent `UNIMOD:<id>` for a loss). A new upstream monosaccharide must be added there.
 - Changing the MCP major version is breaking for the `server` extra (0.2.0 moved from
   FastMCP/mcp 1.x to `MCPServer`/mcp 2.x).
 - Vercel: without `installCommand` the runtime installs from `pyproject.toml`/`uv.lock`

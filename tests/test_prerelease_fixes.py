@@ -101,3 +101,44 @@ def test_server_and_dashboard_survive_unknown_composition_token() -> None:
     with pytest.warns(UserWarning):
         rows = dashboard_entries(UnimodDatabase([entry]))
     assert rows[0]["proforma_formula"] is None
+
+
+def _unknown_token_loss():
+    from unimodpy import NeutralLoss
+
+    return NeutralLoss(key=1, mono_mass=1.0, avge_mass=1.0, flag=False, composition="H(2) Foo(1)")
+
+
+def test_unknown_neutral_loss_token_gives_none_and_warns() -> None:
+    nl = _unknown_token_loss()
+    with pytest.warns(UserWarning, match="Foo") as record:
+        assert nl.dict_composition is None
+    assert len(record) == 1
+    with pytest.warns(UserWarning, match="Foo") as record:
+        assert nl.proforma_formula is None
+    assert len(record) == 1, "one warning per property access"
+
+
+def test_server_survives_unknown_neutral_loss_token() -> None:
+    pytest.importorskip("fastapi")
+    import dataclasses
+
+    from unimodpy import Specificity
+    from unimodpy.server.models import to_unimod_entry
+
+    spec = Specificity(
+        spec_num=1,
+        group=1,
+        hidden=False,
+        site="S",
+        position="Anywhere",
+        classification="Post-translational",
+        misc_notes=None,
+        neutral_losses=(_unknown_token_loss(),),
+    )
+    entry = dataclasses.replace(_unknown_token_entry(), delta_composition="H(2)", specificities=(spec,))
+    with pytest.warns(UserWarning, match="UNIMOD:99999.*Foo") as record:
+        wire = to_unimod_entry(entry)
+    assert len(record) == 1, "one warning per bad loss"
+    assert wire.proforma_formula == "H2"
+    assert wire.specificities[0].neutral_losses[0].proforma_formula is None

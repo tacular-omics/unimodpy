@@ -13,6 +13,7 @@ from unimodpy._formula import to_proforma_formula
 from unimodpy.models import NeutralLoss as _NeutralLoss
 from unimodpy.models import Specificity as _Specificity
 from unimodpy.models import UnimodEntry as _UnimodEntry
+from unimodpy.models import _lenient_composition
 
 
 class Reference(BaseModel):
@@ -29,7 +30,7 @@ class NeutralLoss(BaseModel):
     avge_mass: float
     flag: bool
     composition: str
-    proforma_formula: str
+    proforma_formula: str | None = Field(description="None if the composition cannot be parsed.")
 
 
 class Specificity(BaseModel):
@@ -101,18 +102,20 @@ class SearchResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _neutral_loss(nl: _NeutralLoss) -> NeutralLoss:
+def _neutral_loss(nl: _NeutralLoss, entry_id: int) -> NeutralLoss:
+    # Parse via the entry-aware helper so the warning names the parent UNIMOD id.
+    composition = _lenient_composition(nl.composition, f"UNIMOD:{entry_id} neutral loss {nl.key}")
     return NeutralLoss(
         key=nl.key,
         mono_mass=nl.mono_mass,
         avge_mass=nl.avge_mass,
         flag=nl.flag,
         composition=nl.composition,
-        proforma_formula=nl.proforma_formula,
+        proforma_formula=to_proforma_formula(composition) if composition is not None else None,
     )
 
 
-def _specificity(spec: _Specificity) -> Specificity:
+def _specificity(spec: _Specificity, entry_id: int) -> Specificity:
     return Specificity(
         spec_num=spec.spec_num,
         group=spec.group,
@@ -121,7 +124,7 @@ def _specificity(spec: _Specificity) -> Specificity:
         position=str(spec.position),
         classification=str(spec.classification),
         misc_notes=spec.misc_notes,
-        neutral_losses=[_neutral_loss(nl) for nl in spec.neutral_losses],
+        neutral_losses=[_neutral_loss(nl, entry_id) for nl in spec.neutral_losses],
     )
 
 
@@ -157,7 +160,7 @@ def to_unimod_entry(entry: _UnimodEntry, *, include_hidden: bool = False) -> Uni
         proforma_formula=to_proforma_formula(composition) if composition is not None else None,
         dict_composition=composition,
         approved=entry.approved,
-        specificities=[_specificity(s) for s in specs],
+        specificities=[_specificity(s, entry.id) for s in specs],
     )
 
 
