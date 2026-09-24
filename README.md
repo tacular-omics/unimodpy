@@ -128,7 +128,7 @@ claude mcp add unimod http://localhost:8000/mcp --transport http
 | `Site` | `StrEnum` of amino acid residues and termini. |
 | `Position` | `StrEnum` of sequence position constraints. |
 | `Classification` | `StrEnum` of modification classes. |
-| `UnimodError`, `UnimodParseError`, `UnimodKeyError` | Package exceptions; `UnimodError` is a `ValueError`, `UnimodKeyError` (raised by `db[key]` on a miss) is also a `KeyError`. |
+| `UnimodError`, `UnimodParseError`, `UnimodKeyError` | Package exceptions; `UnimodParseError` is also a `ValueError`, `UnimodKeyError` (raised by `db[key]` on a miss) is also a `KeyError`. |
 
 </details>
 

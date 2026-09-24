@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 
-class UnimodError(ValueError):
-    """Base class for every error unimodpy raises on purpose.
-
-    Also a ``ValueError`` (since 1.1), so ``except ValueError`` catches every unimodpy error.
-    """
+class UnimodError(Exception):
+    """Base class for every error unimodpy raises on purpose."""
 
 
 class UnimodParseError(UnimodError, ValueError):
@@ -15,4 +12,4 @@ class UnimodParseError(UnimodError, ValueError):
 
 
 class UnimodKeyError(UnimodError, KeyError):
-    """``db[key]`` found no entry. Also a ``KeyError``; ``args[0]`` is the key looked up."""
+    """``db[key]`` found no entry. Also a ``KeyError`` (not a ``ValueError``); ``args[0]`` is the key looked up."""

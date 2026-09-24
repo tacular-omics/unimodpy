@@ -55,7 +55,7 @@ src/unimodpy/
                    UnimodEntry frozen slots dataclasses (dict_composition, proforma_formula)
   parser.py        parse_obo(path) -> UnimodDatabase (streams [Term] blocks); load()
   database.py      UnimodDatabase: id/name indexes, search, __getitem__, write_tsv/write_obo
-  errors.py        UnimodError(ValueError), UnimodParseError, UnimodKeyError(UnimodError, KeyError)
+  errors.py        UnimodError, UnimodParseError, UnimodKeyError(UnimodError, KeyError)
   _formula.py      delta_composition parsing (monosaccharide expansion, isotopes) + Hill formula
   _download.py     download() from https://www.unimod.org/obo/unimod.obo to ~/.cache/unimodpy/
   _tabular.py      write_tsv (TSV/CSV, one row per entry, specificities joined with "; ")
@@ -114,7 +114,7 @@ From `unimodpy/__init__.py`:
   `write_tsv`, `write_obo`, `header_lines`)
 - Models: `UnimodEntry`, `Specificity`, `NeutralLoss`
 - Enums: `Site` (23), `Position` (5), `Classification` (14); unknown upstream values stay raw `str` (warning)
-- Errors: `UnimodError(ValueError)`, `UnimodParseError(UnimodError, ValueError)`, `UnimodKeyError(UnimodError, KeyError)` (`errors.py`)
+- Errors: `UnimodError`, `UnimodParseError(UnimodError, ValueError)`, `UnimodKeyError(UnimodError, KeyError)` (`errors.py`)
 - `__version__`
 
 `unimodpy.server` (extra): `app`, `mcp`; `unimodpy.server.models` holds the wire models.

@@ -272,12 +272,12 @@ def load(source: Path | str | None = None, *, refresh: bool = False, cache: bool
         source:  Path to an OBO file. If omitted, uses the bundled file.
         refresh: Download the latest OBO from unimod.org (``download(force=True)``)
                  and load it instead of the bundled file.
-        cache:   If True, parse the bundled file only once per process and return
-                 that same database object on every later ``load(cache=True)`` call.
-                 The shared object is read-only in practice (entries are frozen and
-                 it has no mutating methods); do not reassign its attributes. Only
-                 for the bundled file: cannot be combined with *source* or *refresh*.
-                 Default False: a new database each call.
+        cache:   If True, parse the bundled file only once per process and return that same
+                 database object on every later ``load(cache=True)`` call. The returned database is
+                 shared by every ``load(cache=True)`` caller in the process: do not modify it or reassign its
+                 attributes, such as ``header_lines``; a change is seen by every
+                 later caller. Only for the bundled file: cannot be combined with *source* or
+                 *refresh*. Default False: a new database each call.
 
     Returns:
         A :class:`UnimodDatabase` ready for lookups.

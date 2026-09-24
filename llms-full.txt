@@ -79,7 +79,7 @@ Everything below is importable from `unimodpy` (`unimodpy.__all__`).
 
 ### Errors
 
-`UnimodError(ValueError)` is the base class (a `ValueError` since 1.1);
+`UnimodError(Exception)` is the base class;
 `UnimodParseError(UnimodError, ValueError)` is raised for a malformed OBO file;
 `UnimodKeyError(UnimodError, KeyError)` is raised by `db[key]` on a miss, so both
 `except KeyError` and `except UnimodError` catch it. All live in `unimodpy.errors` and
