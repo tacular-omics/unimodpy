@@ -165,7 +165,7 @@ class UnimodDatabase:
                 or ``unit``, ``site`` or ``position`` is not one of the values above.
         """
         if self._mass_index is None:
-            self._mass_index = MassIndex((e, e.delta_mono_mass, _slots(e)) for e in self._entries)
+            self._mass_index = MassIndex((e, e.get_mass(), _slots(e)) for e in self._entries)
         return self._mass_index.search(
             delta, tolerance=tolerance, unit=unit, site=site, position=position, error=UnimodError
         )

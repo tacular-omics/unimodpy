@@ -185,6 +185,13 @@ class UnimodEntry:
         """The CURIE ``"UNIMOD:<id>"``, as sent on the server wire."""
         return f"UNIMOD:{self.id}"
 
+    def get_mass(self, *, monoisotopic: bool = True) -> float | None:
+        """The delta mass in Da: ``delta_mono_mass`` (default) or, with ``monoisotopic=False``, ``delta_avge_mass``.
+
+        ``None`` when Unimod gives no such mass for this entry.
+        """
+        return self.delta_mono_mass if monoisotopic else self.delta_avge_mass
+
     def __repr__(self) -> str:
         return (
             f"UnimodEntry(id={self.id}, name={self.name!r}, "

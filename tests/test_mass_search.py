@@ -14,7 +14,7 @@ from unimodpy.database import _slots
 
 
 def _mass(entry) -> float | None:
-    return entry.delta_mono_mass
+    return entry.get_mass()
 
 
 def _brute(db: UnimodDatabase, delta, tolerance=0.01, unit="da", site=None, position=None):
