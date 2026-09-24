@@ -109,6 +109,7 @@ Connecting a client: `claude mcp add unimod https://unimod.tacular.dev/mcp --tra
 From `unimodpy/__init__.py`:
 
 - Mass search (1.1): `db.search_mass(delta, *, tolerance=0.01, unit="da", site=None, position=None)` over `delta_mono_mass`, returns `(entry, delta - mass)` closest first; `db.get_by_site(site)`. The index and site/position rules live in `_mass.py`, identical in psimodpy, unimodpy and uniprotptmpy: keep the three copies in sync.
+- `entry.get_mass(*, monoisotopic=True)` (1.1) returns `delta_mono_mass`/`delta_avge_mass`; `search_mass` indexes `get_mass()`.
 - Loading: `load(source=None, *, refresh=False, cache=False)`, `parse_obo(path)`, `download(dest=None, *, force=False)`
 - Writing: `write_tsv(entries, path, *, delimiter="\t")`, `write_obo(entries, path, *, header_lines=())`
 - Database: `UnimodDatabase` (`get_by_id`, `get_by_name`, `search`, `db[...]`, `len`, iteration,
