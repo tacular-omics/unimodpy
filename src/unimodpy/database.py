@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
+from unimodpy.errors import UnimodError
 from unimodpy.models import UnimodEntry
 
 
@@ -13,6 +14,9 @@ class UnimodDatabase:
 
     Supports lookup by integer ID, "UNIMOD:N" string, bare numeric string,
     or case-insensitive name.
+
+    Raises:
+        UnimodError: two entries share an id.
     """
 
     def __init__(self, entries: Iterable[UnimodEntry], *, header_lines: tuple[str, ...] = ()) -> None:
@@ -22,16 +26,22 @@ class UnimodDatabase:
         self.header_lines: tuple[str, ...] = header_lines
 
         for entry in entries:
+            if entry.id in self._by_id:
+                raise UnimodError(f"duplicate id UNIMOD:{entry.id} ({self._by_id[entry.id].name!r} and {entry.name!r})")
             self._entries.append(entry)
             self._by_id[entry.id] = entry
-            self._by_name_lower[entry.name.lower()] = entry
+            # Duplicate names: the first entry keeps the name (see get_by_name).
+            self._by_name_lower.setdefault(entry.name.lower(), entry)
 
     def get_by_id(self, id: int | str) -> UnimodEntry | None:
         """Return the entry for the given ID, or None if not found.
 
         Accepts an integer, a bare numeric string ("1"), or a full
-        UNIMOD identifier string ("UNIMOD:1", case-insensitive).
+        UNIMOD identifier string ("UNIMOD:1", case-insensitive). Anything
+        else, including an unparseable string and ``bool``, returns None.
         """
+        if isinstance(id, bool):
+            return None
         if isinstance(id, str):
             cleaned = id.strip().upper().removeprefix("UNIMOD:")
             try:
@@ -45,7 +55,10 @@ class UnimodDatabase:
         return self._by_id.get(n)
 
     def get_by_name(self, name: str) -> UnimodEntry | None:
-        """Return the entry whose name matches (case-insensitive), or None."""
+        """Return the entry whose name matches (case-insensitive), or None.
+
+        If several entries share a name, the first one in file order wins.
+        """
         return self._by_name_lower.get(name.lower())
 
     def search(self, query: str) -> list[UnimodEntry]:

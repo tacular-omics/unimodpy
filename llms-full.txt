@@ -55,19 +55,28 @@ Everything below is importable from `unimodpy` (`unimodpy.__all__`).
 
 `load(source: Path | str | None = None, *, refresh: bool = False) -> UnimodDatabase`
 : Load the database. No arguments: the bundled OBO. `source`: parse that OBO file.
-  `refresh=True`: call `download()` first and parse the fresh file. `refresh` is ignored
-  when `source` is given.
+  `refresh=True`: call `download(force=True)` first and parse the fresh file. `refresh`
+  is ignored when `source` is given.
 
 `parse_obo(path: Path | str) -> UnimodDatabase`
 : Parse any UNIMOD-format OBO file. Streams `[Term]` blocks; keeps the header lines
-  (everything before the first `[Term]`) in `db.header_lines`. Raises `ValueError` if a
-  term has no `id` or `name`, and `ValueError` from the enum constructors if a
-  specificity uses an unknown site, position or classification.
+  (everything before the first `[Term]`) in `db.header_lines`. A term without `id` or
+  `name` is skipped with a `UserWarning`. A site, position or classification this
+  version does not know is kept as the raw string, with a `UserWarning`, so a newer
+  upstream file still loads. A malformed value (bad id, number, date, incomplete
+  neutral loss) raises `UnimodParseError` naming the file, line and entry. Two terms
+  with the same id raise `UnimodError`.
 
-`download(dest: Path | str | None = None) -> Path`
+`download(dest: Path | str | None = None, *, force: bool = False) -> Path`
 : Download `http://www.unimod.org/obo/unimod.obo` to `dest` (default
-  `~/.cache/unimodpy/UNIMOD.obo`), creating parent directories. Returns the path.
-  Network errors propagate from `urllib`.
+  `~/.cache/unimodpy/UNIMOD.obo`), creating parent directories. Returns the path. An
+  existing `dest` is returned as is unless `force=True`. Network errors propagate from
+  `urllib`; a failed download leaves no partial file.
+
+### Errors
+
+`UnimodError(Exception)` is the base class; `UnimodParseError(UnimodError, ValueError)`
+is raised for a malformed OBO file. Both live in `unimodpy.errors` and are exported.
 
 ### Writing
 
@@ -87,12 +96,13 @@ Everything below is importable from `unimodpy` (`unimodpy.__all__`).
 ### UnimodDatabase
 
 `UnimodDatabase(entries: Iterable[UnimodEntry], *, header_lines: tuple[str, ...] = ())`
-: In-memory collection. Build one yourself to filter or combine entries.
+: In-memory collection. Build one yourself to filter or combine entries. Raises
+  `UnimodError` if two entries share an id.
 
 | member | purpose |
 |---|---|
-| `get_by_id(id: int \| str) -> UnimodEntry \| None` | int, `"21"`, `"UNIMOD:21"` (prefix case-insensitive); non-numeric string -> `None` |
-| `get_by_name(name: str) -> UnimodEntry \| None` | exact name, case-insensitive |
+| `get_by_id(id: int \| str) -> UnimodEntry \| None` | int, `"21"`, `"UNIMOD:21"` (prefix case-insensitive); non-numeric string or `bool` -> `None` |
+| `get_by_name(name: str) -> UnimodEntry \| None` | exact name, case-insensitive; if names collide the first entry in file order wins |
 | `search(query: str) -> list[UnimodEntry]` | case-insensitive substring over name, definition, synonyms; file order |
 | `db[key]` | `get_by_id(key)`, else `get_by_name(key)` for a string, else `KeyError` (also for non-int/str keys) |
 | `db.get(key, default=None)` | `db[key]`, or `default` instead of `KeyError` |
@@ -109,7 +119,7 @@ Everything below is importable from `unimodpy` (`unimodpy.__all__`).
 | `name` | `str` | e.g. `"Oxidation"` |
 | `definition` | `str` | `""` if missing |
 | `synonyms` | `tuple[str, ...]` | |
-| `definition_ref` | `str` | raw citation list from the `def:` line, e.g. `"RESID:AA0027, PMID:11461766, ..."` |
+| `definition_ref` | `str` | citation list from the `def:` line without brackets, e.g. `"RESID:AA0027, PMID:11461766, ..."`; `""` if none |
 | `comment` | `str \| None` | |
 | `record_id` | `int \| None` | |
 | `delta_mono_mass`, `delta_avge_mass` | `float \| None` | monoisotopic / average mass shift, Da |
@@ -135,8 +145,9 @@ The root node `UNIMOD:0` ("unimod root node") has every xref-derived field `None
 
 ### Specificity (frozen, slots)
 
-`spec_num: int`, `group: int`, `hidden: bool`, `site: Site`, `position: Position`,
-`classification: Classification`, `misc_notes: str | None`,
+`spec_num: int`, `group: int`, `hidden: bool`, `site: Site | str`, `position: Position | str`,
+`classification: Classification | str` (a raw `str` only for a value this version does
+not know), `misc_notes: str | None`,
 `neutral_losses: tuple[NeutralLoss, ...]` (sorted by key).
 `hidden=True` marks rare or deprecated sites that UNIMOD hides from default listings.
 `str(spec)` gives `"Spec 1: S @ Anywhere [Post-translational]"` plus notes and losses.
@@ -145,7 +156,8 @@ The root node `UNIMOD:0` ("unimod root node") has every xref-derived field `None
 
 `key: int` (nominal loss mass from the xref name, e.g. `98`), `mono_mass: float`,
 `avge_mass: float`, `flag: bool`, `composition: str` (raw, e.g. `"H(3) O(4) P"`).
-Properties `dict_composition` and `proforma_formula` work as on `UnimodEntry`.
+Properties `dict_composition -> dict[str, int]` and `proforma_formula -> str` work as on
+`UnimodEntry` but are never `None`.
 
 ### Enums (StrEnum)
 
@@ -233,8 +245,9 @@ assert list(unimodpy.parse_obo("out/UNIMOD.obo")) == list(db)
 
 unimodpy.write_tsv([e for e in db if e.approved], "approved.tsv")   # any iterable of entries
 
-fresh = unimodpy.load(refresh=True)          # downloads to ~/.cache/unimodpy/UNIMOD.obo
-path = unimodpy.download("/tmp/UNIMOD.obo")  # just the file
+fresh = unimodpy.load(refresh=True)          # re-downloads to ~/.cache/unimodpy/UNIMOD.obo
+path = unimodpy.download("/tmp/UNIMOD.obo")  # just the file; reused if it exists
+path = unimodpy.download("/tmp/UNIMOD.obo", force=True)  # always fetch
 ```
 
 ## HTTP API (server extra)
@@ -266,7 +279,8 @@ Out-of-range query values return 422.
 Wire models (`unimodpy.server.models`, pydantic):
 
 - `UnimodEntry`: `id`, `accession` (`"UNIMOD:21"`), `name`, `definition` (`None` if empty),
-  `references: [Reference]`, `synonyms`, `comment`, `parent_id` (= `is_a`),
+  `references: [Reference]`, `synonyms`, `comment`, `is_a` (parent id; `parent_id` is a
+  deprecated duplicate, removed in 2.0),
   `delta_mono_mass`, `delta_avge_mass`, `delta_composition`, `proforma_formula`,
   `dict_composition`, `approved`, `specificities: [Specificity]`.
   Hidden specificities are removed unless `include_hidden=true`.
@@ -295,7 +309,7 @@ database." Built on `mcp.server.MCPServer` (mcp 2.x). Tools:
 |---|---|---|
 | `get_by_id` | `id: str` (`"1"` or `"UNIMOD:1"`), `include_hidden: bool = false` | `UnimodEntry` or null |
 | `get_by_name` | `name: str` (exact, case-insensitive), `include_hidden: bool = false` | `UnimodEntry` or null |
-| `search` | `query: str`, `limit: int = 25` | list of `UnimodSummary`; call `get_by_id` for full records |
+| `search` | `query: str` (non-empty), `limit: int = 25` (1-500) | list of `UnimodSummary`; call `get_by_id` for full records |
 
 Results come back as `structuredContent` with an `outputSchema`, plus a JSON text block.
 

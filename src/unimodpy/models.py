@@ -88,46 +88,36 @@ class NeutralLoss:
         return f"NL[{self.key}] {self.mono_mass:+.6f} Da  {self.composition}"
 
     @property
-    def dict_composition(self) -> dict[str, int] | None:
-        """Expanded elemental composition as {element: count}.
+    def dict_composition(self) -> dict[str, int]:
+        """Expanded elemental composition of the lost group as {element: count}.
 
-        Monosaccharide abbreviations (Hex, HexNAc, dHex, NeuAc, etc.) in
-        delta_composition are expanded to their constituent atoms.  Isotope-
-        labelled elements (2H, 13C) are kept as distinct keys.  Counts can be
-        negative for modifications that remove atoms.
-
-        Returns None when delta_composition is absent (e.g. the root node).
+        Monosaccharide abbreviations are expanded to atoms and isotope-labelled
+        elements are kept as distinct keys ("13C", "2H"). The zero-loss
+        composition ``"0"`` gives ``{}``.
         """
-        if self.composition is None:
-            return None
         return parse_delta_composition(self.composition)
 
     @property
-    def proforma_formula(self) -> str | None:
-        """Hill-notation formula string for use in ProForma modification annotations.
-
-        Produces a string like ``C2H2O`` or ``H-1NO-1`` that can be wrapped in
-        ``[Formula:...]`` for a full ProForma term.  Monosaccharide abbreviations
-        are expanded to atoms; isotope labels are bracketed (e.g. ``[13C2]H5[2H]``).
-
-        Returns None when delta_composition is absent.
-        """
-        comp = self.dict_composition
-        if comp is None:
-            return None
-        return to_proforma_formula(comp)
+    def proforma_formula(self) -> str:
+        """Hill-notation formula string of the lost group, e.g. ``HO3P``; ``""`` for a zero loss."""
+        return to_proforma_formula(self.dict_composition)
 
 
 @dataclass(frozen=True, slots=True)
 class Specificity:
-    """A single site/position specificity for a UNIMOD modification."""
+    """A single site/position specificity for a UNIMOD modification.
+
+    ``site``, ``position`` and ``classification`` are enum members. A value that
+    this version does not know (new upstream vocabulary) is kept as the raw
+    string, and the parser emits a warning.
+    """
 
     spec_num: int
     group: int
     hidden: bool
-    site: Site
-    position: Position
-    classification: Classification
+    site: Site | str
+    position: Position | str
+    classification: Classification | str
     misc_notes: str | None
     neutral_losses: tuple[NeutralLoss, ...]
 
@@ -153,13 +143,16 @@ class UnimodEntry:
 
     xref-derived fields (record_id, delta_*, username_*, etc.) are None for
     the root node UNIMOD:0, which carries no xref lines.
+
+    ``definition_ref`` is the citation list from the ``def:`` line without the
+    surrounding brackets (``"RESID:AA0048, PMID:11999733"``); ``""`` when absent.
     """
 
     id: int
     name: str
     definition: str
     synonyms: tuple[str, ...]
-    definition_ref: str = "UNIMOD:0"
+    definition_ref: str = ""
     comment: str | None = None
     record_id: int | None = None
     delta_mono_mass: float | None = None

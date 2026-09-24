@@ -28,7 +28,7 @@ class NeutralLoss(BaseModel):
     avge_mass: float
     flag: bool
     composition: str
-    proforma_formula: str | None
+    proforma_formula: str
 
 
 class Specificity(BaseModel):
@@ -52,7 +52,12 @@ class UnimodEntry(BaseModel):
     references: list[Reference]
     synonyms: list[str]
     comment: str | None
-    parent_id: int | None
+    is_a: int | None = Field(description="Parent term id (the OBO is_a).")
+    parent_id: int | None = Field(
+        default=None,
+        deprecated="parent_id is deprecated; use is_a. It will be removed in unimodpy 2.0.",
+        description="Deprecated duplicate of is_a.",
+    )
     delta_mono_mass: float | None
     delta_avge_mass: float | None
     delta_composition: str | None
@@ -70,6 +75,13 @@ class UnimodSummary(BaseModel):
     name: str
     delta_mono_mass: float | None
     proforma_formula: str | None
+
+
+class HealthResponse(BaseModel):
+    ok: bool
+    package: str
+    version: str
+    count: int
 
 
 class EntryListResponse(BaseModel):
@@ -140,6 +152,7 @@ def to_unimod_entry(entry: _UnimodEntry, *, include_hidden: bool = False) -> Uni
         references=parse_definition_ref(entry.definition_ref),
         synonyms=list(entry.synonyms),
         comment=entry.comment,
+        is_a=entry.is_a,
         parent_id=entry.is_a,
         delta_mono_mass=entry.delta_mono_mass,
         delta_avge_mass=entry.delta_avge_mass,

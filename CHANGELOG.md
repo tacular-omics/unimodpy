@@ -2,7 +2,29 @@
 
 ## [Unreleased]
 
+### Breaking
+
+Shared 1.0 API with psimodpy and uniprotptmpy.
+
+- `download(dest=None, *, force=False)` returns an existing `dest` without downloading; pass `force=True` to re-fetch. `load(refresh=True)` forces. The download goes to a temporary file first, so a failure leaves no truncated cache file.
+- `UnimodEntry.definition_ref` defaults to `""` instead of the fake `"UNIMOD:0"`, and a `def:` line with empty brackets (`[]`) parses to `""`. The stored string is bracketless, as before.
+- A duplicate id raises `UnimodError` in `UnimodDatabase(...)` and `parse_obo`. It used to keep both entries in `len`/iteration while `get_by_id` returned the last.
+- A duplicate name (case-insensitive) is resolved first-wins in `get_by_name`/`db[name]`; it used to be last-wins.
+- A `[Term]` block without `id` or `name` is skipped with a `UserWarning`; it used to raise a bare `ValueError` and abort the load.
+- Malformed values (bad id, mass, date, integer, incomplete neutral loss) raise `UnimodParseError` naming the file, line and entry, instead of bare `ValueError`/`KeyError`. `UnimodParseError` subclasses `ValueError`, so `except ValueError` still works.
+- `Specificity.site`/`position`/`classification` are typed `Site | str`, `Position | str`, `Classification | str`: a value this version does not know is kept as the raw string with a `UserWarning` instead of aborting `load(refresh=True)` with `ValueError`.
+- `get_by_id(True)`/`get_by_id(False)` return `None` (they used to return UNIMOD:1 / UNIMOD:0), so `True in db` is `False` and `db[True]` raises `KeyError`.
+- `NeutralLoss.dict_composition` is typed `dict[str, int]` and `NeutralLoss.proforma_formula` `str` (never `None`); the server's `NeutralLoss.proforma_formula` is `str`.
+- Server wire model `UnimodEntry` exposes the parent as `is_a`, like psimodpy. `parent_id` is still sent as a deprecated duplicate (pydantic `deprecated`) and will be removed in 2.0.
+- MCP `search` validates `query` (non-empty) and `limit` (1-500), like the REST `/api/search`; out-of-range arguments return a tool error instead of an unbounded list.
+
+Migration: read `entry.is_a` instead of `parent_id` from the server; call `download(force=True)` where you relied on `download()` always fetching; compare `spec.site == "K"` (works for enum members and raw strings) rather than `isinstance(spec.site, Site)`; catch `UnimodError` for duplicate ids; treat `definition_ref == ""` as "no citations".
+
 ### Added
+
+- `unimodpy.errors`: `UnimodError(Exception)` and `UnimodParseError(UnimodError, ValueError)`, exported from `unimodpy`.
+- `/api/health` returns a typed `HealthResponse`; `dashboard_entries()` returns `DashboardEntry` TypedDicts.
+- Classifier `Development Status :: 5 - Production/Stable`.
 
 - `UnimodDatabase.get(key, default=None)`: returns `db[key]` or `default`, never raises, as in psimodpy and uniprotptmpy.
 - Tests recompute every entry's and every neutral loss's monoisotopic and average mass from its parsed composition against a frozen NIST table (pyteomics 5.0.1; generator in `tests/reference/`), plus Hypothesis property tests for the lookups. All 1551 compositions agree.

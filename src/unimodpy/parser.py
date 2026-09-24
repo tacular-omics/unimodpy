@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import datetime
 import re
+import warnings
+from enum import StrEnum
 from importlib.resources import as_file, files
 from pathlib import Path
 
 from unimodpy.database import UnimodDatabase
+from unimodpy.errors import UnimodParseError
 from unimodpy.models import Classification, NeutralLoss, Position, Site, Specificity, UnimodEntry
 
 # Module-level compiled regexes — avoids recompilation on every entry.
@@ -34,7 +37,39 @@ _SCALAR_XREFS = frozenset(
 )
 
 
-def _build_entry(lines: list[str]) -> UnimodEntry:
+def _coerce[E: StrEnum](enum: type[E], value: str, where: str) -> E | str:
+    """Return ``enum(value)``, or the raw string plus a warning for a value this version does not know."""
+    try:
+        return enum(value)
+    except ValueError:
+        warnings.warn(
+            f"{where}: unknown {enum.__name__} {value!r} kept as a plain string",
+            UserWarning,
+            stacklevel=2,
+        )
+        return value
+
+
+def _build_entry(lines: list[str], line_no: int, source: str) -> UnimodEntry | None:
+    """Build one entry from the lines of a ``[Term]`` block starting at *line_no*.
+
+    Returns None (with a warning) for a block without ``id`` or ``name``.
+    Raises UnimodParseError for a malformed value.
+    """
+    where = f"{source}, line {line_no}"
+    raw_id = next((line[3:].strip() for line in lines if line.startswith("id:")), None)
+    if raw_id:
+        where = f"{where} ({raw_id})"
+    try:
+        return _build_entry_inner(lines, where)
+    except UnimodParseError:
+        raise
+    except (ValueError, KeyError) as exc:
+        detail = f"missing {exc}" if isinstance(exc, KeyError) else str(exc)
+        raise UnimodParseError(f"{where}: {detail}") from exc
+
+
+def _build_entry_inner(lines: list[str], where: str) -> UnimodEntry | None:
     entry_id: int | None = None
     name: str | None = None
     definition: str | None = None
@@ -48,19 +83,22 @@ def _build_entry(lines: list[str]) -> UnimodEntry:
     # nls[spec_num][nl_key][field] = value
     nls: dict[int, dict[int, dict[str, str]]] = {}
 
-    definition_ref: str = "UNIMOD:0"
+    definition_ref: str = ""
 
     for line in lines:
         if line.startswith("id:"):
             raw = line[3:].strip()
-            entry_id = int(raw.upper().removeprefix("UNIMOD:"))
+            try:
+                entry_id = int(raw.upper().removeprefix("UNIMOD:"))
+            except ValueError:
+                raise UnimodParseError(f"{where}: invalid id {raw!r}") from None
         elif line.startswith("name:"):
             name = line[5:].strip()
         elif line.startswith("def:"):
             m = _DEF_RE.match(line)
             if m:
                 definition = m.group(1)
-                definition_ref = m.group(2) or "UNIMOD:0"
+                definition_ref = m.group(2)
             else:
                 definition = line[4:].strip()
         elif line.startswith("synonym:"):
@@ -97,9 +135,18 @@ def _build_entry(lines: list[str]) -> UnimodEntry:
             if key in _SCALAR_XREFS:
                 scalars[key] = value
 
+    if entry_id is None or name is None:
+        missing = "id" if entry_id is None else "name"
+        warnings.warn(f"{where}: [Term] block missing '{missing}' skipped", UserWarning, stacklevel=2)
+        return None
+
     # Build neutral losses per spec
     spec_nls: dict[int, tuple[NeutralLoss, ...]] = {}
     for spec_n, nl_dict in nls.items():
+        for nl_k, fields in nl_dict.items():
+            absent = [f for f in ("mono_mass", "avge_mass", "flag", "composition") if f not in fields]
+            if absent:
+                raise UnimodParseError(f"{where}: spec_{spec_n}_neutral_loss_{nl_k} missing {', '.join(absent)}")
         nl_objs = sorted(
             (
                 NeutralLoss(
@@ -121,19 +168,14 @@ def _build_entry(lines: list[str]) -> UnimodEntry:
             spec_num=spec_n,
             group=int(fields["group"]),
             hidden=fields["hidden"] == "1",
-            site=Site(fields["site"]),
-            position=Position(fields["position"]),
-            classification=Classification(fields["classification"]),
+            site=_coerce(Site, fields["site"], where),
+            position=_coerce(Position, fields["position"], where),
+            classification=_coerce(Classification, fields["classification"], where),
             misc_notes=fields.get("misc_notes"),
             neutral_losses=spec_nls.get(spec_n, ()),
         )
         for spec_n, fields in sorted(specs.items())
     )
-
-    if entry_id is None:
-        raise ValueError("OBO entry is missing required 'id' tag")
-    if name is None:
-        raise ValueError("OBO entry is missing required 'name' tag")
 
     return UnimodEntry(
         id=entry_id,
@@ -167,6 +209,15 @@ def parse_obo(path: Path | str) -> UnimodDatabase:
 
     Streams the file line-by-line; peak memory is proportional to one entry
     at a time, not the full file.
+
+    Unknown ``site``/``position``/``classification`` values are kept as raw
+    strings and ``[Term]`` blocks without ``id`` or ``name`` are skipped; both
+    emit a ``UserWarning``.
+
+    Raises:
+        UnimodParseError: a malformed value (bad id, number or date, incomplete
+            neutral loss). The message names the file, line and entry.
+        UnimodError: two entries share an id.
     """
     path = Path(path)
     entries: list[UnimodEntry] = []
@@ -174,17 +225,24 @@ def parse_obo(path: Path | str) -> UnimodDatabase:
     current_lines: list[str] = []
     in_term = False
     past_header = False
+    term_line = 0
+
+    def flush() -> None:
+        entry = _build_entry(current_lines, term_line, path.name)
+        if entry is not None:
+            entries.append(entry)
 
     with path.open(encoding="utf-8") as fh:
-        for raw_line in fh:
+        for line_no, raw_line in enumerate(fh, start=1):
             line = raw_line.rstrip("\n")
             if line == "[Term]":
                 in_term = True
                 past_header = True
                 current_lines = []
+                term_line = line_no
             elif in_term:
                 if line == "":
-                    entries.append(_build_entry(current_lines))
+                    flush()
                     in_term = False
                 else:
                     current_lines.append(line)
@@ -193,7 +251,7 @@ def parse_obo(path: Path | str) -> UnimodDatabase:
 
     # Flush final entry when file ends without a trailing blank line
     if in_term and current_lines:
-        entries.append(_build_entry(current_lines))
+        flush()
 
     while header_lines and header_lines[-1] == "":
         header_lines.pop()
@@ -205,8 +263,8 @@ def load(source: Path | str | None = None, *, refresh: bool = False) -> UnimodDa
 
     Args:
         source:  Path to an OBO file. If omitted, uses the bundled file.
-        refresh: Download the latest OBO from unimod.org before loading.
-                 Ignored when *source* is given explicitly.
+        refresh: Download the latest OBO from unimod.org (``download(force=True)``)
+                 before loading. Ignored when *source* is given explicitly.
 
     Returns:
         A :class:`UnimodDatabase` ready for lookups.
@@ -216,7 +274,7 @@ def load(source: Path | str | None = None, *, refresh: bool = False) -> UnimodDa
     if refresh:
         from unimodpy._download import download
 
-        return parse_obo(download())
+        return parse_obo(download(force=True))
     ref = files("unimodpy") / "data" / "UNIMOD.obo"
     with as_file(ref) as path:
         return parse_obo(path)
