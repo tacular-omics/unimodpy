@@ -53,11 +53,6 @@ class UnimodEntry(BaseModel):
     synonyms: list[str]
     comment: str | None
     is_a: int | None = Field(description="Parent term id (the OBO is_a).")
-    parent_id: int | None = Field(
-        default=None,
-        deprecated="parent_id is deprecated; use is_a. It will be removed in unimodpy 2.0.",
-        description="Deprecated duplicate of is_a.",
-    )
     delta_mono_mass: float | None
     delta_avge_mass: float | None
     delta_composition: str | None
@@ -146,14 +141,13 @@ def to_unimod_entry(entry: _UnimodEntry, *, include_hidden: bool = False) -> Uni
 
     return UnimodEntry(
         id=entry.id,
-        accession=f"UNIMOD:{entry.id}",
+        accession=entry.accession,
         name=entry.name,
         definition=entry.definition or None,
         references=parse_definition_ref(entry.definition_ref),
         synonyms=list(entry.synonyms),
         comment=entry.comment,
         is_a=entry.is_a,
-        parent_id=entry.is_a,
         delta_mono_mass=entry.delta_mono_mass,
         delta_avge_mass=entry.delta_avge_mass,
         delta_composition=entry.delta_composition,
@@ -167,7 +161,7 @@ def to_unimod_entry(entry: _UnimodEntry, *, include_hidden: bool = False) -> Uni
 def to_unimod_summary(entry: _UnimodEntry) -> UnimodSummary:
     return UnimodSummary(
         id=entry.id,
-        accession=f"UNIMOD:{entry.id}",
+        accession=entry.accession,
         name=entry.name,
         delta_mono_mass=entry.delta_mono_mass,
         proforma_formula=entry.proforma_formula,

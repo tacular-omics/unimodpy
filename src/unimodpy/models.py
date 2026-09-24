@@ -166,6 +166,11 @@ class UnimodEntry:
     is_a: int | None = None
     specificities: tuple[Specificity, ...] = ()
 
+    @property
+    def accession(self) -> str:
+        """The CURIE ``"UNIMOD:<id>"``, as sent on the server wire."""
+        return f"UNIMOD:{self.id}"
+
     def __repr__(self) -> str:
         return (
             f"UnimodEntry(id={self.id}, name={self.name!r}, "

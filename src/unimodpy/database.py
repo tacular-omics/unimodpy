@@ -44,10 +44,10 @@ class UnimodDatabase:
             return None
         if isinstance(id, str):
             cleaned = id.strip().upper().removeprefix("UNIMOD:")
-            try:
-                n = int(cleaned)
-            except ValueError:
+            # Plain ASCII digits only: int() would also accept "1_0", "+1" and non-ASCII digits.
+            if not (cleaned.isascii() and cleaned.isdigit()):
                 return None
+            n = int(cleaned)
         elif isinstance(id, int):
             n = id
         else:
@@ -58,14 +58,19 @@ class UnimodDatabase:
         """Return the entry whose name matches (case-insensitive), or None.
 
         If several entries share a name, the first one in file order wins.
+        A non-``str`` argument returns None.
         """
+        if not isinstance(name, str):
+            return None
         return self._by_name_lower.get(name.lower())
 
     def search(self, query: str) -> list[UnimodEntry]:
         """Return all entries where query appears in name, definition, or any synonym.
 
-        Comparison is case-insensitive substring matching.
+        Comparison is case-insensitive substring matching. A non-``str`` query returns ``[]``.
         """
+        if not isinstance(query, str):
+            return []
         q = query.lower()
         return [
             entry

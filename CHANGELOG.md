@@ -15,22 +15,33 @@ Shared 1.0 API with psimodpy and uniprotptmpy.
 - `Specificity.site`/`position`/`classification` are typed `Site | str`, `Position | str`, `Classification | str`: a value this version does not know is kept as the raw string with a `UserWarning` instead of aborting `load(refresh=True)` with `ValueError`.
 - `get_by_id(True)`/`get_by_id(False)` return `None` (they used to return UNIMOD:1 / UNIMOD:0), so `True in db` is `False` and `db[True]` raises `KeyError`.
 - `NeutralLoss.dict_composition` is typed `dict[str, int]` and `NeutralLoss.proforma_formula` `str` (never `None`); the server's `NeutralLoss.proforma_formula` is `str`.
-- Server wire model `UnimodEntry` exposes the parent as `is_a`, like psimodpy. `parent_id` is still sent as a deprecated duplicate (pydantic `deprecated`) and will be removed in 2.0.
+- Server wire model `UnimodEntry` exposes the parent as `is_a`, like psimodpy. The old `parent_id` field is removed from REST and MCP responses.
+- `load(source, refresh=True)` raises `ValueError("pass either source or refresh=True, not both")`, as in uniprotptmpy; `refresh` used to be silently ignored.
+- `parse_delta_composition` (and so `dict_composition` / `proforma_formula`) raises `UnimodParseError` for a malformed token (`"H(2"`, `"H(x)"`) or a token that is neither an element symbol nor a known monosaccharide (`"Foo(2)"`). Unknown tokens used to be kept verbatim as dict keys and malformed counts raised a bare `ValueError`.
 - MCP `search` validates `query` (non-empty) and `limit` (1-500), like the REST `/api/search`; out-of-range arguments return a tool error instead of an unbounded list.
 
-Migration: read `entry.is_a` instead of `parent_id` from the server; call `download(force=True)` where you relied on `download()` always fetching; compare `spec.site == "K"` (works for enum members and raw strings) rather than `isinstance(spec.site, Site)`; catch `UnimodError` for duplicate ids; treat `definition_ref == ""` as "no citations".
+Migration: read `entry.is_a` instead of `parent_id` from the server; call `download(force=True)` where you relied on `download()` always fetching; compare `spec.site == "K"` (works for enum members and raw strings) rather than `isinstance(spec.site, Site)`; catch `UnimodError` for duplicate ids; pass only one of `source` / `refresh=True` to `load`; treat `definition_ref == ""` as "no citations".
 
 ### Added
 
 - `unimodpy.errors`: `UnimodError(Exception)` and `UnimodParseError(UnimodError, ValueError)`, exported from `unimodpy`.
 - `/api/health` returns a typed `HealthResponse`; `dashboard_entries()` returns `DashboardEntry` TypedDicts.
 - Classifier `Development Status :: 5 - Production/Stable`.
+- `UnimodEntry.accession` property: `"UNIMOD:21"`, the same string as the server's `accession` field.
 
 - `UnimodDatabase.get(key, default=None)`: returns `db[key]` or `default`, never raises, as in psimodpy and uniprotptmpy.
-- Tests recompute every entry's and every neutral loss's monoisotopic and average mass from its parsed composition against a frozen NIST table (pyteomics 5.0.1; generator in `tests/reference/`), plus Hypothesis property tests for the lookups. All 1551 compositions agree.
+- Tests recompute every entry's and every neutral loss's monoisotopic and average mass from its parsed composition against a frozen NIST table (pyteomics 5.0.1; generator in `tests/reference/`), plus Hypothesis property tests for the lookups. All 1560 compositions agree.
+
+### Changed
+
+- Bundled `UNIMOD.obo` refreshed to the 2026-02-17 upstream release: 1,561 terms (was 1,552). Loads without warnings.
 
 ### Fixed
 
+- `get_by_id` (and `db[...]`, `in`, REST `/api/entries/{id}`, MCP `get_by_id`) accepts only plain ASCII digits after the optional `UNIMOD:` prefix. `int()` also took `"1_0"` (-> UNIMOD:10), `"+1"` and non-ASCII digits such as `"\u0661"`; those now return `None` / 404.
+- `get_by_name` returns `None` and `search` returns `[]` for a non-`str` argument (`None`, `1`) instead of raising `AttributeError`.
+- `download()` fetches over `https://www.unimod.org` (was `http`).
+- `scripts/release_version.py sync --set X.Y.Z` also sets CITATION.cff `date-released` to today; CITATION.cff gains `date-released`.
 - `proforma_formula` sorts an isotope next to its element: UNIMOD:214 is now `C4[13C3]H12N[15N]O`, was `C4[13C3]H12NO[15N]` (23 entries).
 - `db[key]` raises `KeyError` for a non-int/str key: `db[1.0]` used to return UNIMOD:1 while `1.0 in db` was False, and `db[[1]]` raised `TypeError`. `get_by_id` returns None for such keys. Id strings may have surrounding whitespace (`" UNIMOD:1 "`).
 - `key in db` now accepts every key `db[key]` accepts (integer ID, `"UNIMOD:1"`, `"1"`, case-insensitive name) and returns `False` for unknown keys. It used to iterate entries, so `"Acetyl" in db` was `False`. Membership of a `UnimodEntry` object still works.

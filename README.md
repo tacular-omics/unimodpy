@@ -14,7 +14,7 @@ database bundled in, so it works fully offline.
 
 ## Highlights
 
-- **Bundled, offline data** — 1,552 UNIMOD terms shipped with the package; no network calls needed
+- **Bundled, offline data** — 1,561 UNIMOD terms shipped with the package; no network calls needed
 - **Zero core dependencies** — pure Python, `pip install` and go
 - **Typed, immutable models** with `py.typed` (PEP 561) for IDE autocomplete and static checking
 - **Rich lookups** — by numeric ID, `UNIMOD:N` accession, exact name, or free-text search across names, definitions, and synonyms
@@ -44,7 +44,7 @@ Requires Python 3.12+. No third-party dependencies for the core package.
 import unimodpy
 
 db = unimodpy.load()          # bundled UNIMOD database, no download needed
-print(len(db))                # 1552
+print(len(db))                # 1561
 
 # Lookup by integer ID, "UNIMOD:N" accession, or subscript
 acetyl = db.get_by_id(1)
@@ -116,13 +116,13 @@ claude mcp add unimod http://localhost:8000/mcp --transport http
 
 | Symbol | Description |
 |--------|-------------|
-| `load(source=None, *, refresh=False)` | Load the database. No args → bundled file. `refresh=True` → download first. |
+| `load(source=None, *, refresh=False)` | Load the database. No args → bundled file. `refresh=True` → download first (not together with `source`: `ValueError`). |
 | `download(dest=None, *, force=False)` | Download latest OBO from unimod.org; returns `Path`. An existing file is reused unless `force=True`. |
 | `parse_obo(path)` | Low-level: parse any OBO file at `path`. |
 | `write_tsv(entries, path, *, delimiter)` | Write entries to a TSV (or CSV) file. |
 | `write_obo(entries, path, *, header_lines)` | Write entries back to UNIMOD OBO format. |
 | `UnimodDatabase` | Iterable collection with `get_by_id`, `get_by_name`, `search`, `write_tsv()`, `write_obo()`, `__getitem__`. Also exposes `header_lines`. |
-| `UnimodEntry` | Frozen dataclass for one modification term. Includes `definition_ref` (bracketless, `""` if none). |
+| `UnimodEntry` | Frozen dataclass for one modification term. Includes `definition_ref` (bracketless, `""` if none) and the `accession` property (`"UNIMOD:21"`). |
 | `Specificity` | Frozen dataclass for one site/position rule. |
 | `NeutralLoss` | Frozen dataclass for one neutral loss. |
 | `Site` | `StrEnum` of amino acid residues and termini. |

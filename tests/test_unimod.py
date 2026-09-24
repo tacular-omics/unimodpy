@@ -16,7 +16,7 @@ from unimodpy import UnimodDatabase, parse_obo
 
 
 def test_entry_count(db: UnimodDatabase) -> None:
-    assert len(db) == 1552
+    assert len(db) == 1561
 
 
 def test_root_node(db: UnimodDatabase) -> None:

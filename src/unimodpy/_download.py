@@ -5,7 +5,7 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
-UNIMOD_OBO_URL = "http://www.unimod.org/obo/unimod.obo"
+UNIMOD_OBO_URL = "https://www.unimod.org/obo/unimod.obo"
 _DEFAULT_DEST = Path.home() / ".cache" / "unimodpy" / "UNIMOD.obo"
 
 

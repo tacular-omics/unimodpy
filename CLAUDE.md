@@ -3,7 +3,7 @@
 ## Project overview
 
 unimodpy parses and queries the [UNIMOD](http://www.unimod.org/) mass-spectrometry
-modifications database. It bundles `src/unimodpy/data/UNIMOD.obo` (1,552 terms,
+modifications database. It bundles `src/unimodpy/data/UNIMOD.obo` (1,561 terms,
 including the root node `UNIMOD:0`), parses it into frozen dataclasses, and exposes
 an in-memory `UnimodDatabase` with lookup by ID, name and free-text search. The core
 package has **no runtime dependencies** and works offline.
@@ -21,7 +21,7 @@ users outside the workspace: `peff_digest`, `peff_uniprot_fetcher`.
 ## Commands
 
 ```bash
-just test            # uv run pytest tests            (112 tests, ~4 s)
+just test            # uv run pytest tests            (~220 tests, ~8 s)
 just lint            # uv run ruff check src tests
 just ty              # uv run ty check src
 just check           # lint + ty + test  (the recipe comment says "type checking"; it runs all three)
@@ -57,7 +57,7 @@ src/unimodpy/
   database.py      UnimodDatabase: id/name indexes, search, __getitem__, write_tsv/write_obo
   errors.py        UnimodError, UnimodParseError
   _formula.py      delta_composition parsing (monosaccharide expansion, isotopes) + Hill formula
-  _download.py     download() from http://www.unimod.org/obo/unimod.obo to ~/.cache/unimodpy/
+  _download.py     download() from https://www.unimod.org/obo/unimod.obo to ~/.cache/unimodpy/
   _tabular.py      write_tsv (TSV/CSV, one row per entry, specificities joined with "; ")
   _obo_writer.py   write_obo (round-trips: parse_obo(write_obo(db)) == db, header included)
   data/UNIMOD.obo  bundled database, shipped in the wheel
@@ -86,7 +86,7 @@ import time and converts dataclasses to pydantic models per response.
 | route | purpose |
 |---|---|
 | `GET /` | dashboard HTML (`docs/index.html`; 404 if not bundled) |
-| `GET /data.json` | dashboard payload, 1,551 entries, `Cache-Control: max-age=3600` |
+| `GET /data.json` | dashboard payload, 1,560 entries, `Cache-Control: max-age=3600` |
 | `GET /api/health` | `{ok, package, version, count}` |
 | `GET /api/entries?limit=50&offset=0&include_hidden=false` | paged full entries (limit 1-500); includes root node id 0 |
 | `GET /api/entries/{id}?include_hidden=false` | `21` or `UNIMOD:21`; 404 if missing |
@@ -146,12 +146,13 @@ From `unimodpy/__init__.py`:
 - `id` 0 is the UNIMOD root node: every xref-derived field is `None`. `/data.json`
   excludes it; `/api/entries` and `len(db)` include it.
 - `db[key]` tries the ID first, then the name. `get_by_id("Acetyl")` returns `None`.
-- `load(source, refresh=True)`: `refresh` is ignored when `source` is given.
+- `load(source, refresh=True)` raises `ValueError` (pass one or the other).
 - `NeutralLoss.composition` is UNIMOD's raw string. Zero-loss entries use `"0"`, which
   `_formula` treats as no atoms: `dict_composition` is `{}` and `proforma_formula` is `""`.
   One loss (UNIMOD:1010) uses `"Water"`, which `MONOSACCHARIDE_FORMULAS` expands to `H2O`.
-- `_formula.MONOSACCHARIDE_FORMULAS` holds residue (minus water) formulas; unknown tokens
-  are kept verbatim as keys.
+- `_formula.MONOSACCHARIDE_FORMULAS` holds residue (minus water) formulas; any other token
+  must be an element symbol (optionally isotope-prefixed, `13C`), else `parse_delta_composition`
+  raises `UnimodParseError`. A new upstream monosaccharide must be added there.
 - Changing the MCP major version is breaking for the `server` extra (0.2.0 moved from
   FastMCP/mcp 1.x to `MCPServer`/mcp 2.x).
 - Vercel: without `installCommand` the runtime installs from `pyproject.toml`/`uv.lock`

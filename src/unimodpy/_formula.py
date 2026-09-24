@@ -14,6 +14,20 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 
+from unimodpy.errors import UnimodParseError
+
+_ELEMENTS: frozenset[str] = frozenset(
+    """H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr
+    Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu
+    Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr
+    Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og""".split()
+)
+
+# One delta_composition token: a key, optionally followed by "(count)" with a signed integer count.
+_TOKEN_RE = re.compile(r"^([^()\s]+)(?:\((-?\d+)\))?$")
+# An element key, optionally isotope-prefixed: "C", "13C", "2H".
+_ELEMENT_KEY_RE = re.compile(r"^(\d+)?([A-Z][a-z]?)$")
+
 # ---------------------------------------------------------------------------
 # Monosaccharide residue formulas (as elemental formula strings).
 # Each formula is the residue form (i.e. the monosaccharide minus water),
@@ -68,6 +82,10 @@ def parse_delta_composition(delta_composition: str) -> dict[str, int]:
 
     Returns {element_key: count} where element_key is a symbol like
     "C", "H", "O", "13C", "2H", etc.
+
+    Raises:
+        UnimodParseError: a malformed token (``"H(2"``, ``"H(x)"``) or a key that is
+            neither a known monosaccharide nor an element symbol (``"Foo(2)"``).
     """
     counts: dict[str, int] = defaultdict(int)
 
@@ -75,12 +93,15 @@ def parse_delta_composition(delta_composition: str) -> dict[str, int]:
         if token == "0":
             # UNIMOD writes an empty composition (zero-mass neutral loss) as "0".
             continue
-        if "(" in token:
-            key, tail = token.split("(", 1)
-            count = int(tail.rstrip(")"))
-        else:
-            key = token
-            count = 1
+        m = _TOKEN_RE.match(token)
+        if m is None:
+            raise UnimodParseError(f"malformed composition token {token!r} in {delta_composition!r}")
+        key = m.group(1)
+        count = int(m.group(2)) if m.group(2) is not None else 1
+        if key not in MONOSACCHARIDE_FORMULAS:
+            em = _ELEMENT_KEY_RE.match(key)
+            if em is None or em.group(2) not in _ELEMENTS:
+                raise UnimodParseError(f"unknown composition token {key!r} in {delta_composition!r}")
 
         if count == 0:
             continue
