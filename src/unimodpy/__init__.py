@@ -8,7 +8,7 @@ from unimodpy.errors import UnimodError, UnimodParseError
 from unimodpy.models import Classification, NeutralLoss, Position, Site, Specificity, UnimodEntry
 from unimodpy.parser import load, parse_obo
 
-__version__ = "0.2.2"
+__version__ = "1.0.0"
 
 __all__ = [
     "__version__",

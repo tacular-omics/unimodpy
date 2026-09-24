@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [1.0.0] (2026-09-23)
+
+First stable release: the public API now follows semantic versioning (breaking changes only in a new major version).
+
 ### Breaking
 
 Shared 1.0 API with psimodpy and uniprotptmpy.
@@ -26,9 +30,8 @@ Migration: read `entry.is_a` instead of `parent_id` from the server; call `downl
 
 - `unimodpy.errors`: `UnimodError(Exception)` and `UnimodParseError(UnimodError, ValueError)`, exported from `unimodpy`.
 - `/api/health` returns a typed `HealthResponse`; `dashboard_entries()` returns `DashboardEntry` TypedDicts.
-- Classifier `Development Status :: 5 - Production/Stable`.
+- Classifiers `Development Status :: 5 - Production/Stable` and `Programming Language :: Python :: 3.14`; `Documentation` project URL. `SECURITY.md` and `CONTRIBUTING.md`.
 - `UnimodEntry.accession` property: `"UNIMOD:21"`, the same string as the server's `accession` field.
-
 - `UnimodDatabase.get(key, default=None)`: returns `db[key]` or `default`, never raises, as in psimodpy and uniprotptmpy.
 - Tests recompute every entry's and every neutral loss's monoisotopic and average mass from its parsed composition against a frozen NIST table (pyteomics 5.0.1; generator in `tests/reference/`), plus Hypothesis property tests for the lookups. All 1560 compositions agree.
 
