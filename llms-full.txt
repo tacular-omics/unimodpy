@@ -160,8 +160,9 @@ not know), `misc_notes: str | None`,
 
 `key: int` (nominal loss mass from the xref name, e.g. `98`), `mono_mass: float`,
 `avge_mass: float`, `flag: bool`, `composition: str` (raw, e.g. `"H(3) O(4) P"`).
-Properties `dict_composition -> dict[str, int]` and `proforma_formula -> str` work as on
-`UnimodEntry` but are never `None`.
+Properties `dict_composition -> dict[str, int] | None` and `proforma_formula -> str | None`
+work as on `UnimodEntry`: a zero loss (`"0"`) gives `{}` / `""`, and `None` plus a
+`UserWarning` naming the token means the composition could not be parsed.
 
 ### Enums (StrEnum)
 
@@ -289,7 +290,8 @@ Wire models (`unimodpy.server.models`, pydantic):
   Hidden specificities are removed unless `include_hidden=true`.
 - `Specificity`: `spec_num`, `group`, `hidden`, `site`, `position`, `classification`
   (plain strings), `misc_notes`, `neutral_losses: [NeutralLoss]`.
-- `NeutralLoss`: `key`, `mono_mass`, `avge_mass`, `flag`, `composition`, `proforma_formula`.
+- `NeutralLoss`: `key`, `mono_mass`, `avge_mass`, `flag`, `composition`, `proforma_formula`
+  (`None` if the composition cannot be parsed).
 - `UnimodSummary`: `id`, `accession`, `name`, `delta_mono_mass`, `proforma_formula`.
 - `Reference`: `type`, `accession`, `value`. Parsed from `definition_ref` by
   `unimodpy.server.references.parse_definition_ref`: `RESID:AA0036` ->

@@ -173,12 +173,13 @@ def test_bool_is_not_an_id(db: UnimodDatabase) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_neutral_loss_formula_types_are_not_optional() -> None:
+def test_neutral_loss_formula_types() -> None:
+    # Zero loss is {} / "", not None; None only means an unparseable composition (with a warning).
     nl = NeutralLoss(key=0, mono_mass=0.0, avge_mass=0.0, flag=False, composition="0")
     assert nl.dict_composition == {}
     assert nl.proforma_formula == ""
-    assert typing.get_type_hints(NeutralLoss.__dict__["dict_composition"].fget)["return"] == dict[str, int]
-    assert typing.get_type_hints(NeutralLoss.__dict__["proforma_formula"].fget)["return"] is str
+    assert typing.get_type_hints(NeutralLoss.__dict__["dict_composition"].fget)["return"] == dict[str, int] | None
+    assert typing.get_type_hints(NeutralLoss.__dict__["proforma_formula"].fget)["return"] == str | None
 
 
 def test_definition_ref_default_is_empty() -> None:
