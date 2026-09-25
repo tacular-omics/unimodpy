@@ -286,7 +286,7 @@ the bundled database once at import.
 
 | method + path | query params | returns |
 |---|---|---|
-| `GET /api/health` | | `{"ok": true, "package": "unimodpy", "version": "1.0.0", "count": 1561}` |
+| `GET /api/health` | | `{"ok": true, "package": "unimodpy", "version": "1.1.0", "count": 1561}` |
 | `GET /api/entries` | `limit` 1-500 (50), `offset` >= 0 (0), `include_hidden` (false) | `{total, limit, offset, items: [UnimodEntry]}`; starts with the root node id 0 |
 | `GET /api/entries/{id}` | `include_hidden` | `UnimodEntry`; `id` is `21` or `UNIMOD:21`; 404 `{"detail": "No entry for id='...'"}` |
 | `GET /api/entries/by-name/{name}` | `include_hidden` | `UnimodEntry`; exact, case-insensitive; 404 if missing |
