@@ -45,24 +45,28 @@ def test_contains_getitem_and_get_agree(key):
     assert (key in _DB) is (entry is not None)
 
 
-@_SETTINGS
-@given(_existing)
-def test_every_id_form_resolves(key):
-    assert _DB.get(key) is not None
+def test_every_entry_resolves_to_itself_by_every_key():
+    """Every key form of every entry returns that same entry, not just some entry.
 
-
-@_SETTINGS
-@given(_names)
-def test_every_name_resolves(name):
-    assert _DB.get(name) is not None
-
-
-@_SETTINGS
-@given(st.sampled_from(_IDS))
-def test_entry_ids_round_trip(n):
-    entry = _DB[n]
-    assert _DB[f"UNIMOD:{n}"] is entry
-    assert entry in _DB
+    Catches a name or id index that maps a key to the wrong entry: a name that
+    case-folds onto another entry's name, a name that parses as an id, an id form
+    ("0021", " UNIMOD:21 ") that misparses, or a site index missing an entry.
+    """
+    failures = []
+    by_site: dict[str, set[int]] = {}
+    for entry in _DB:
+        n = entry.id
+        keys = [n, str(n), f"{n:04d}", f"UNIMOD:{n}", f"unimod:{n}", f" UNIMOD:{n} "]
+        keys += [entry.name, entry.name.upper(), entry.name.lower()]
+        failures += [(n, k) for k in keys if _DB.get(k) is not entry]
+        if _DB.get_by_id(n) is not entry or _DB.get_by_name(entry.name) is not entry or entry not in _DB:
+            failures.append((n, "get_by_id/get_by_name/in"))
+        for site in {str(s.site) for s in entry.specificities}:
+            if site not in by_site:
+                by_site[site] = {id(e) for e in _DB.get_by_site(site)}
+            if id(entry) not in by_site[site]:
+                failures.append((n, f"get_by_site({site!r})"))
+    assert not failures, f"{len(failures)} lookups returned another entry: {failures[:20]}"
 
 
 @_SETTINGS
