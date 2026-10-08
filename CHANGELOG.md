@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.1.2] (2026-10-08)
+
 ### Fixed
 
 - Specificities that reuse a spec number are no longer lost. UNIMOD gives several sites the same number (Phospho has `spec_1` for both T and S), and the parser kept only the last block per number: 351 of 2,826 specificities and 619 of 1,713 neutral losses were dropped, so Phospho had no T, Oxidation no W and Deamidated no Q, and `search_mass(79.966331, site="T")` found nothing. Specificity blocks are now read in file order and neutral losses attach to the block they follow; `write_obo` output re-parses to the same specificities.
