@@ -228,3 +228,36 @@ def test_get_by_site_unknown_is_empty(db: UnimodDatabase, site: object) -> None:
 def test_get_by_site_returns_fresh_list(db: UnimodDatabase) -> None:
     db.get_by_site("S").clear()
     assert db.get_by_site("S")
+
+
+# ---------------------------------------------------------------- every entry, its own mass and sites
+
+# Specificity position -> the ``position`` a user passes when the residue was observed there.
+_OBSERVED_AT = {
+    "Anywhere": "anywhere",
+    "Any N-term": "peptide n-term",
+    "Any C-term": "peptide c-term",
+    "Protein N-term": "protein n-term",
+    "Protein C-term": "protein c-term",
+}
+
+
+def test_every_entry_found_at_its_own_mass_site_and_position(db: UnimodDatabase) -> None:
+    """Every entry with a mass is found at that mass, alone and with each of its own (site, position).
+
+    The brute-force property tests share ``_slots`` with the index, so they cannot see a
+    wrong site/position mapping in ``_slots``/``_WHERE`` (e.g. Protein N-term mapped to
+    anywhere, a terminus site lost) or an entry dropped from the index. This queries
+    the way a user would, from the specificity as Unimod states it.
+    """
+    failures = []
+    for entry in db:
+        mass = entry.delta_mono_mass
+        if mass is None:
+            continue
+        queries = [(None, None)] + [(str(s.site), _OBSERVED_AT[str(s.position)]) for s in entry.specificities]
+        for site, position in dict.fromkeys(queries):
+            hits = db.search_mass(mass, tolerance=1e-6, site=site, position=position)
+            if not any(e is entry for e, _ in hits):
+                failures.append((entry.id, entry.name, mass, site, position))
+    assert not failures, f"{len(failures)} self-searches missed their entry: {failures[:20]}"
