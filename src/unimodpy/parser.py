@@ -70,6 +70,29 @@ def _build_entry(lines: list[str], line_no: int, source: str) -> UnimodEntry | N
         raise UnimodParseError(f"{where}: {detail}") from exc
 
 
+def _build_nls(nl_dict: dict[int, dict[str, str]], spec_n: int, where: str) -> tuple[NeutralLoss, ...]:
+    """Build the neutral losses of one specificity block, sorted by key."""
+    for nl_k, fields in nl_dict.items():
+        absent = [f for f in ("mono_mass", "avge_mass", "flag", "composition") if f not in fields]
+        if absent:
+            raise UnimodParseError(f"{where}: spec_{spec_n}_neutral_loss_{nl_k} missing {', '.join(absent)}")
+    return tuple(
+        sorted(
+            (
+                NeutralLoss(
+                    key=nl_k,
+                    mono_mass=float(fields["mono_mass"]),
+                    avge_mass=float(fields["avge_mass"]),
+                    flag=fields["flag"] == "true",
+                    composition=fields["composition"],
+                )
+                for nl_k, fields in nl_dict.items()
+            ),
+            key=lambda nl: nl.key,
+        )
+    )
+
+
 def _build_entry_inner(lines: list[str], where: str) -> UnimodEntry | None:
     entry_id: int | None = None
     name: str | None = None
@@ -79,10 +102,10 @@ def _build_entry_inner(lines: list[str], where: str) -> UnimodEntry | None:
     is_a: int | None = None
 
     scalars: dict[str, str] = {}
-    # specs[spec_num][field] = value
-    specs: dict[int, dict[str, str]] = {}
-    # nls[spec_num][nl_key][field] = value
-    nls: dict[int, dict[int, dict[str, str]]] = {}
+    # Specificity blocks in file order: (spec_num, fields, nls[nl_key][field]).
+    # UNIMOD reuses a spec number for several sites (Phospho has two ``spec_1``
+    # blocks, T and S), so blocks cannot be keyed by number.
+    specs: list[tuple[int, dict[str, str], dict[int, dict[str, str]]]] = []
 
     definition_ref: str = ""
 
@@ -123,14 +146,21 @@ def _build_entry_inner(lines: list[str], where: str) -> UnimodEntry | None:
                 spec_n = int(nl_m.group(1))
                 nl_k = int(nl_m.group(2))
                 field = nl_m.group(3)
-                nls.setdefault(spec_n, {}).setdefault(nl_k, {})[field] = value
+                # A neutral loss belongs to the specificity block it follows.
+                if not specs or specs[-1][0] != spec_n:
+                    raise UnimodParseError(f"{where}: {key} does not follow a spec_{spec_n} block")
+                specs[-1][2].setdefault(nl_k, {})[field] = value
                 continue
 
             spec_m = _SPEC_RE.match(key)
             if spec_m:
                 spec_n = int(spec_m.group(1))
                 field = spec_m.group(2)
-                specs.setdefault(spec_n, {})[field] = value
+                # A new block starts at a different spec number, or when a field
+                # repeats within the current one (a reused spec number).
+                if not specs or specs[-1][0] != spec_n or field in specs[-1][1]:
+                    specs.append((spec_n, {}, {}))
+                specs[-1][1][field] = value
                 continue
 
             if key in _SCALAR_XREFS:
@@ -141,29 +171,7 @@ def _build_entry_inner(lines: list[str], where: str) -> UnimodEntry | None:
         warnings.warn(f"{where}: [Term] block missing '{missing}' skipped", UserWarning, stacklevel=2)
         return None
 
-    # Build neutral losses per spec
-    spec_nls: dict[int, tuple[NeutralLoss, ...]] = {}
-    for spec_n, nl_dict in nls.items():
-        for nl_k, fields in nl_dict.items():
-            absent = [f for f in ("mono_mass", "avge_mass", "flag", "composition") if f not in fields]
-            if absent:
-                raise UnimodParseError(f"{where}: spec_{spec_n}_neutral_loss_{nl_k} missing {', '.join(absent)}")
-        nl_objs = sorted(
-            (
-                NeutralLoss(
-                    key=nl_k,
-                    mono_mass=float(fields["mono_mass"]),
-                    avge_mass=float(fields["avge_mass"]),
-                    flag=fields["flag"] == "true",
-                    composition=fields["composition"],
-                )
-                for nl_k, fields in nl_dict.items()
-            ),
-            key=lambda nl: nl.key,
-        )
-        spec_nls[spec_n] = tuple(nl_objs)
-
-    # Build specificities
+    # Build specificities (stable sort by spec number keeps file order within a number)
     specificities = tuple(
         Specificity(
             spec_num=spec_n,
@@ -173,9 +181,9 @@ def _build_entry_inner(lines: list[str], where: str) -> UnimodEntry | None:
             position=_coerce(Position, fields["position"], where),
             classification=_coerce(Classification, fields["classification"], where),
             misc_notes=fields.get("misc_notes"),
-            neutral_losses=spec_nls.get(spec_n, ()),
+            neutral_losses=_build_nls(nl_dict, spec_n, where),
         )
-        for spec_n, fields in sorted(specs.items())
+        for spec_n, fields, nl_dict in sorted(specs, key=lambda block: block[0])
     )
 
     return UnimodEntry(
