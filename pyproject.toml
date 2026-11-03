@@ -28,10 +28,15 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+# Floors are the lowest versions that resolve together and pass the suite; mcp sets the
+# uvicorn and pydantic ones itself. Lowest fastapi that resolves with mcp is 0.108.0 and
+# lowest that imports is 0.100.0; neither is covered by CI, because 0.108/0.109 fail only
+# inside starlette's TestClient against httpx 0.28.
 server = [
-    "fastapi>=0.115",
-    "uvicorn>=0.30",
-    "mcp>=2.1.1,<3",
+    "fastapi>=0.110.1",
+    "uvicorn>=0.31.1",
+    "mcp>=2.0.0,<3",
+    "pydantic>=2.12,<3",
 ]
 
 [project.urls]
