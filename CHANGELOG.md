@@ -5,10 +5,11 @@
 ### Fixed
 
 - `server` extra: `uvicorn>=0.30` could never be installed. mcp requires
-  `uvicorn>=0.31.1`, so no resolution of the extra contained a 0.30.x, and
-  `--resolution lowest-direct` silently stepped over the declared floor - the floor was
-  unreachable rather than merely untested. Now `uvicorn>=0.31.1`. On emscripten, where
-  mcp does not require uvicorn, this does raise the floor.
+  `uvicorn>=0.31.1` on every platform except emscripten, so no resolution of the extra
+  contained a 0.30.x, and `--resolution lowest-direct` silently stepped over the declared
+  floor - the floor was unreachable rather than merely untested. Now `uvicorn>=0.31.1`.
+  On emscripten, where mcp declares no uvicorn requirement, this floor is the only bound
+  and does raise it, though uvicorn cannot serve on that platform.
 
 ### Changed
 
@@ -17,6 +18,7 @@
 - `server` extra: corrected the remaining floors to the lowest versions that actually
   resolve together and pass the suite - `fastapi>=0.110.1` (was `>=0.115`) and
   `mcp>=2.0.0,<3` (was `>=2.1.1,<3`). No change to what the package does.
+- Updated development and test dependencies. No changes to the library.
 
 ## [1.1.3] (2026-10-26)
 
