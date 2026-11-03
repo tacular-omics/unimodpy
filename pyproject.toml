@@ -28,10 +28,9 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-# Floors are the lowest versions that resolve together and pass the suite; mcp sets the
-# uvicorn and pydantic ones itself. Lowest fastapi that resolves with mcp is 0.108.0 and
-# lowest that imports is 0.100.0; neither is covered by CI, because 0.108/0.109 fail only
-# inside starlette's TestClient against httpx 0.28.
+# Floors reconciled across psimodpy, unimodpy and uniprotptmpy. fastapi: 0.108.0 is the lowest
+# in the contiguous resolving range and 0.100.0 is the lowest that imports (0.104-0.107 cannot
+# resolve: they pin anyio<4 against mcp's anyio>=4.9); neither is covered by CI.
 server = [
     "fastapi>=0.110.1",
     "uvicorn>=0.31.1",
