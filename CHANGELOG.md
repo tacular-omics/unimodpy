@@ -18,7 +18,6 @@
 - `server` extra: corrected the remaining floors to the lowest versions that actually
   resolve together and pass the suite - `fastapi>=0.110.1` (was `>=0.115`) and
   `mcp>=2.0.0,<3` (was `>=2.1.1,<3`). No change to what the package does.
-- Updated development and test dependencies. No changes to the library.
 
 ## [1.1.3] (2026-10-26)
 
