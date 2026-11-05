@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- TSV/CSV export: a `specificities_hidden` column, one `1`/`0` per entry of the
+  `specificities` cell and in the same order. Unimod hides most specificities - 2,747 of
+  the 2,826 in the bundled file - and the flag was parsed and then dropped on the way out,
+  so a reader of the export could not tell which specificities Unimod shows. The column is
+  appended, so the existing columns keep their positions.
+
 ### Fixed
 
 - `search_mass(..., position=...)` returned hits that the same query without `position`
