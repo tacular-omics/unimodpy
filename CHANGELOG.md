@@ -4,6 +4,11 @@
 
 ### Fixed
 
+- `str()` on a `UnimodEntry` raised `TypeError` when the entry had a monoisotopic delta
+  mass but no average mass: the mass line formatted the missing value. It now prints
+  whichever of the two masses the entry carries, so an average-only entry shows its mass
+  instead of no mass line at all. No entry in the bundled database has either combination,
+  so this reached entries built by hand or parsed from an edited OBO file.
 - `server` extra: `uvicorn>=0.30` could never be installed. mcp requires
   `uvicorn>=0.31.1` on every platform except emscripten, so no resolution of the extra
   contained a 0.30.x, and `--resolution lowest-direct` silently stepped over the declared

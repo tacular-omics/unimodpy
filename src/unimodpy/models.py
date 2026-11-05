@@ -207,8 +207,13 @@ class UnimodEntry:
             lines.append(f"  Comment  : {self.comment}")
         if self.proforma_formula:
             lines.append(f"  Formula  : {self.proforma_formula}")
+        masses = []
         if self.delta_mono_mass is not None:
-            lines.append(f"  Mass     : {self.delta_mono_mass:+.6f} Da (mono)  {self.delta_avge_mass:+.4f} Da (avg)")
+            masses.append(f"{self.delta_mono_mass:+.6f} Da (mono)")
+        if self.delta_avge_mass is not None:
+            masses.append(f"{self.delta_avge_mass:+.4f} Da (avg)")
+        if masses:
+            lines.append(f"  Mass     : {'  '.join(masses)}")
         if self.specificities:
             lines.append(f"  Sites ({len(self.specificities)}):")
             for spec in self.specificities:
