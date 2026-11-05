@@ -122,3 +122,22 @@ def test_database_method_csv(db: UnimodDatabase, tmp_path) -> None:
     db.write_tsv(out, delimiter=",")
     rows = _read_dict(out, delimiter=",")
     assert len(rows) == len(db)
+
+
+def test_export_keeps_every_entry_and_specificity_including_hidden(db: UnimodDatabase, tmp_path) -> None:
+    """The export is lossless by count: one row per parsed entry, every specificity in its cell.
+
+    Hidden specificities are the ones at risk, because the server drops them by default and
+    most of the database is hidden (2,747 of 2,826 in the bundled file). Counted, not sampled.
+    """
+    out = tmp_path / "out.tsv"
+    db.write_tsv(out)
+    rows = _read_dict(out)
+    assert len(rows) == len(db)
+    assert [row["id"] for row in rows] == [f"UNIMOD:{entry.id}" for entry in db]
+
+    parsed = sum(len(entry.specificities) for entry in db)
+    hidden = sum(1 for entry in db for spec in entry.specificities if spec.hidden)
+    exported = sum(len(row["specificities"].split("; ")) if row["specificities"] else 0 for row in rows)
+    assert hidden > 0
+    assert exported == parsed
