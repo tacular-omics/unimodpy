@@ -152,13 +152,15 @@ class UnimodDatabase:
                 (any of them), or ``"N-term"`` / ``"C-term"`` for a terminus modification.
                 Several letters mean any of them (``get_by_site`` takes exactly one residue).
                 Matched against each specificity's site, hidden ones included. A terminus
-                specificity (site ``N-term``) also matches a residue query when ``position``
-                puts the residue at that terminus.
+                specificity (site ``N-term``) also matches a residue query whenever
+                ``position`` leaves that terminus open, including when ``position`` is
+                omitted: any residue can sit at a terminus.
             position: Where the modified residue was observed: ``"anywhere"`` (inside the
                 sequence), ``"peptide n-term"``, ``"peptide c-term"``, ``"protein n-term"``
                 or ``"protein c-term"`` (case-insensitive). Keeps entries allowed there;
                 a modification allowed anywhere is allowed at a terminus too. Matched against the
-                position of the same specificity as ``site``.
+                position of the same specificity as ``site``. Passing ``position`` only ever
+                removes hits: the result is a subset of the same query without it.
 
         Raises:
             UnimodError: ``delta`` or ``tolerance`` is not a finite number (or ``tolerance`` < 0),

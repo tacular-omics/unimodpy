@@ -4,6 +4,16 @@
 
 ### Fixed
 
+- `search_mass(..., position=...)` returned hits that the same query without `position`
+  did not: a parameter that narrows was adding matches. A terminus specificity (site
+  `N-term`, meaning any residue at that terminus) was matched against a residue query only
+  when `position` named a terminus, so the least-constrained query was the narrowest one.
+  With no `position` both termini are now open, and `position="anywhere"` closes both, so
+  passing `position` can only remove hits. Measured over 960 queries (10 deltas x 16 site
+  values x the 5 positions and none), 175 of them widened before and none do now.
+  This adds hits to queries that pass `site` without `position`:
+  `search_mass(42.010565, site="A")` now returns Acetyl, which can sit on an N-terminal
+  alanine, where before it returned nothing. No query that passes `position` changes.
 - `str()` on a `UnimodEntry` raised `TypeError` when the entry had a monoisotopic delta
   mass but no average mass: the mass line formatted the missing value. It now prints
   whichever of the two masses the entry carries, so an average-only entry shows its mass
