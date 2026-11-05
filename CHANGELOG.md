@@ -8,7 +8,13 @@
   `specificities` cell and in the same order. Unimod hides most specificities - 2,747 of
   the 2,826 in the bundled file - and the flag was parsed and then dropped on the way out,
   so a reader of the export could not tell which specificities Unimod shows. The column is
-  appended, so the existing columns keep their positions.
+  appended, so the existing columns keep their positions. Both cells are split on `"; "`,
+  the same delimiter the rest of this export already uses and the one psimodpy uses: no
+  formatted specificity contains it (0 of 2,826 - `site:position:classification` leaves no
+  room for it) and 686 cells use it as a true delimiter. uniprotptmpy's export uses `" | "`
+  instead, because UniProt writes a taxonomic range as `Archaea; taxId:2157`, so there
+  `"; "` occurs inside a value. The two delimiters across the sibling exports are
+  deliberate; split each export on the one its own header documents.
 
 ### Fixed
 
