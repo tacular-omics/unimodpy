@@ -26,6 +26,7 @@ _COLUMNS: tuple[str, ...] = (
     "approved",
     "is_a",
     "specificities",
+    "specificities_hidden",
 )
 
 _SUB_DELIM = "; "
@@ -48,7 +49,12 @@ def _fmt_spec(spec: Specificity) -> str:
 
 
 def to_row(entry: UnimodEntry) -> list[str]:
-    """Flatten a UnimodEntry to a list of column values."""
+    """Flatten a UnimodEntry to a list of column values.
+
+    ``specificities_hidden`` holds one ``1``/``0`` per entry of ``specificities``, in the
+    same order: Unimod hides most specificities, and the flag is parsed, so dropping it
+    from the export would leave a reader unable to tell which rows Unimod shows.
+    """
     return [
         f"UNIMOD:{entry.id}",
         entry.name,
@@ -66,6 +72,7 @@ def to_row(entry: UnimodEntry) -> list[str]:
         "" if entry.approved is None else ("1" if entry.approved else "0"),
         f"UNIMOD:{entry.is_a}" if entry.is_a is not None else "",
         _SUB_DELIM.join(_fmt_spec(s) for s in entry.specificities),
+        _SUB_DELIM.join("1" if s.hidden else "0" for s in entry.specificities),
     ]
 
 
@@ -76,6 +83,10 @@ def write_tsv(
     delimiter: str = "\t",
 ) -> Path:
     """Write UNIMOD entries to a tab-separated file.
+
+    One row per entry. ``specificities`` joins each specificity as
+    ``site:position:classification`` with ``"; "``, and ``specificities_hidden`` carries
+    their hidden flags as ``1``/``0`` in the same order.
 
     Pass ``delimiter=","`` to emit CSV instead. Returns the resolved Path.
     """

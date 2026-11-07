@@ -122,3 +122,44 @@ def test_database_method_csv(db: UnimodDatabase, tmp_path) -> None:
     db.write_tsv(out, delimiter=",")
     rows = _read_dict(out, delimiter=",")
     assert len(rows) == len(db)
+
+
+def test_export_keeps_every_entry_and_specificity_including_hidden(db: UnimodDatabase, tmp_path) -> None:
+    """The export is lossless by count: one row per parsed entry, every specificity in its cell.
+
+    Hidden specificities are the ones at risk, because the server drops them by default and
+    most of the database is hidden (2,747 of 2,826 in the bundled file). Counted, not sampled.
+    """
+    out = tmp_path / "out.tsv"
+    db.write_tsv(out)
+    rows = _read_dict(out)
+    assert len(rows) == len(db)
+    assert [row["id"] for row in rows] == [f"UNIMOD:{entry.id}" for entry in db]
+
+    parsed = sum(len(entry.specificities) for entry in db)
+    hidden = sum(1 for entry in db for spec in entry.specificities if spec.hidden)
+    exported = sum(len(row["specificities"].split("; ")) if row["specificities"] else 0 for row in rows)
+    assert hidden > 0
+    assert exported == parsed
+
+
+def test_hidden_flag_column_is_last(db: UnimodDatabase, tmp_path) -> None:
+    """Appended, not inserted: a positional reader of the older export keeps its column numbers."""
+    assert _COLUMNS[-1] == "specificities_hidden"
+    out = tmp_path / "out.tsv"
+    db.write_tsv(out)
+    assert _read(out)[0][-1] == "specificities_hidden"
+
+
+def test_hidden_flags_align_with_the_specificities_cell(db: UnimodDatabase, tmp_path) -> None:
+    out = tmp_path / "out.tsv"
+    db.write_tsv(out)
+    rows = _read_dict(out)
+    exported_hidden = 0
+    for row, entry in zip(rows, db, strict=True):
+        flags = row["specificities_hidden"].split("; ") if row["specificities_hidden"] else []
+        specs = row["specificities"].split("; ") if row["specificities"] else []
+        assert flags == ["1" if spec.hidden else "0" for spec in entry.specificities]
+        assert len(flags) == len(specs)
+        exported_hidden += flags.count("1")
+    assert exported_hidden == sum(1 for entry in db for spec in entry.specificities if spec.hidden)

@@ -58,7 +58,8 @@ src/unimodpy/
   errors.py        UnimodError, UnimodParseError, UnimodKeyError(UnimodError, KeyError)
   _formula.py      delta_composition parsing (monosaccharide expansion, isotopes) + Hill formula
   _download.py     download() from https://www.unimod.org/obo/unimod.obo to ~/.cache/unimodpy/
-  _tabular.py      write_tsv (TSV/CSV, one row per entry, specificities joined with "; ")
+  _tabular.py      write_tsv (TSV/CSV, one row per entry, specificities joined with "; ",
+                   their hidden flags in specificities_hidden in the same order)
   _obo_writer.py   write_obo (round-trips: parse_obo(write_obo(db)) == db, header included)
   data/UNIMOD.obo  bundled database, shipped in the wheel
   server/

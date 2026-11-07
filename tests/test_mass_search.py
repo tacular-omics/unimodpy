@@ -82,7 +82,12 @@ def test_n_terminal_acetyl_position(db: UnimodDatabase) -> None:
 def test_unimod_terminus_specificity(db: UnimodDatabase) -> None:
     # Acetyl has an N-term site specificity at Protein N-term: any residue there, not inside.
     assert "Acetyl" in _names(db.search_mass(42.010565, site="N-term", position="protein n-term"))
-    assert "Acetyl" not in _names(db.search_mass(42.010565, site="A"))
+    # site="A" with no position asks where an alanine can carry this mass, and the protein
+    # N-terminus is one of those places: an N-terminal alanine can be acetylated. This line
+    # asserted the opposite until `position` was made to narrow, which is what made the
+    # omission visible - site="A" with position="protein n-term" found Acetyl while site="A"
+    # alone did not, so the filter was adding the hit the unfiltered query had missed.
+    assert "Acetyl" in _names(db.search_mass(42.010565, site="A"))
     assert "Acetyl" in _names(db.search_mass(42.010565, site="K", position="anywhere"))
 
 

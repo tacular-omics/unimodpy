@@ -2,8 +2,37 @@
 
 ## [Unreleased]
 
+### Added
+
+- TSV/CSV export: a `specificities_hidden` column, one `1`/`0` per entry of the
+  `specificities` cell and in the same order. Unimod hides most specificities - 2,747 of
+  the 2,826 in the bundled file - and the flag was parsed and then dropped on the way out,
+  so a reader of the export could not tell which specificities Unimod shows. The column is
+  appended, so the existing columns keep their positions. Both cells are split on `"; "`,
+  the same delimiter the rest of this export already uses and the one psimodpy uses: no
+  formatted specificity contains it (0 of 2,826 - `site:position:classification` leaves no
+  room for it) and 686 cells use it as a true delimiter. uniprotptmpy's export uses `" | "`
+  instead, because UniProt writes a taxonomic range as `Archaea; taxId:2157`, so there
+  `"; "` occurs inside a value. The two delimiters across the sibling exports are
+  deliberate; split each export on the one its own header documents.
+
 ### Fixed
 
+- `search_mass(..., position=...)` returned hits that the same query without `position`
+  did not: a parameter that narrows was adding matches. A terminus specificity (site
+  `N-term`, meaning any residue at that terminus) was matched against a residue query only
+  when `position` named a terminus, so the least-constrained query was the narrowest one.
+  With no `position` both termini are now open, and `position="anywhere"` closes both, so
+  passing `position` can only remove hits. Measured over 960 queries (10 deltas x 16 site
+  values x the 5 positions and none), 175 of them widened before and none do now.
+  This adds hits to queries that pass `site` without `position`:
+  `search_mass(42.010565, site="A")` now returns Acetyl, which can sit on an N-terminal
+  alanine, where before it returned nothing. No query that passes `position` changes.
+- `str()` on a `UnimodEntry` raised `TypeError` when the entry had a monoisotopic delta
+  mass but no average mass: the mass line formatted the missing value. It now prints
+  whichever of the two masses the entry carries, so an average-only entry shows its mass
+  instead of no mass line at all. No entry in the bundled database has either combination,
+  so this reached entries built by hand or parsed from an edited OBO file.
 - `server` extra: `uvicorn>=0.30` could never be installed. mcp requires
   `uvicorn>=0.31.1` on every platform except emscripten, so no resolution of the extra
   contained a 0.30.x, and `--resolution lowest-direct` silently stepped over the declared
