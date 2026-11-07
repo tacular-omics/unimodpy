@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.2.0] (2026-11-06)
+
 ### Added
 
 - TSV/CSV export: a `specificities_hidden` column, one `1`/`0` per entry of the
