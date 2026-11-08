@@ -18,23 +18,20 @@ just install
 
 `just --list` shows the other recipes.
 
-`just install` runs `uv sync`, which installs the dev group but **not** the optional
-`server` extra (`fastapi`, `uvicorn`, `mcp`, `pydantic`). Without it, the tests covering the
-REST API and the MCP endpoint do not run, at two different scopes:
+`just install` runs `uv sync --all-extras`, which installs the dev group and the optional
+`server` extra (`fastapi`, `uvicorn`, `mcp`, `pydantic`). The extra is what the tests covering
+the REST API and the MCP endpoint need, and a plain `uv sync` leaves it out. Those tests then
+do not run, at two different scopes:
 
 - `tests/test_server.py` calls `pytest.importorskip` at **module** scope, so none of its
   tests are collected and the module reports as a **single** skip, however many it hides.
 - `tests/test_prerelease_fixes.py` calls it **inside** individual tests, so those are
   collected and then skipped.
 
-So neither the collected total nor the skip count tells you what ran: the total omits the
-module-scope tests entirely, and one skip line stands for a whole module. Read the **passed**
-count, which is the only one that moves by the number of tests you gained, and `uv pip list`
-to see what is actually installed. For the whole suite:
-
-```bash
-uv sync --all-extras
-```
+So if you ever install without the extra, neither the collected total nor the skip count
+tells you what ran: the total omits the module-scope tests entirely, and one skip line stands
+for a whole module. Read the **passed** count, which is the only one that moves by the number
+of tests you gained, and `uv pip list` to see what is actually installed.
 
 Install the commit hooks once per clone with `uvx pre-commit install`. On every
 commit they run `ruff check`, `ruff format --check` and a few file checks
