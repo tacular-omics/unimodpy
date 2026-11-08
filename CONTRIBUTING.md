@@ -18,6 +18,16 @@ just install
 
 `just --list` shows the other recipes.
 
+`just install` runs `uv sync`, which installs the dev group but **not** the optional
+`server` extra. `tests/test_server.py` `importorskip`s `fastapi` and `mcp`, so a plain
+install collects **344** tests and the 19 server tests never run: they are skipped at
+module scope, so nothing in the summary counts them and a green run says nothing about
+the REST and MCP endpoints. For the whole suite, **363** tests, install the extra:
+
+```bash
+uv sync --all-extras
+```
+
 Install the commit hooks once per clone with `uvx pre-commit install`. On every
 commit they run `ruff check`, `ruff format --check` and a few file checks
 (`uvx pre-commit run --all-files` runs them on everything). Type checks and
