@@ -19,10 +19,20 @@ just install
 `just --list` shows the other recipes.
 
 `just install` runs `uv sync`, which installs the dev group but **not** the optional
-`server` extra. `tests/test_server.py` `importorskip`s `fastapi` and `mcp`, so a plain
-install collects **344** tests and the 19 server tests never run: they are skipped at
-module scope, so nothing in the summary counts them and a green run says nothing about
-the REST and MCP endpoints. For the whole suite, **363** tests, install the extra:
+`server` extra. Two test modules reach for it at two different scopes, and each scope
+hides in a different number, so it takes both to see what a plain install leaves out:
+
+| install | collected | result |
+|---|---|---|
+| `uv sync` | 344 | 342 passed, 3 skipped |
+| `uv sync --all-extras` | 363 | 363 passed |
+
+`tests/test_server.py` calls `pytest.importorskip` at **module** scope, so its 19 tests are
+never collected at all and the whole module reports as one skip line. The two `fastapi`
+tests in `tests/test_prerelease_fixes.py` skip at **function** scope, so they are collected
+and then skipped. 21 tests are therefore blocked by a plain install - a number neither the
+collected totals (19) nor the skip count (3 lines) gives on its own, and a green 344 says
+nothing about the REST or MCP endpoints. For the whole suite:
 
 ```bash
 uv sync --all-extras
