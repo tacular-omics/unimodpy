@@ -18,28 +18,25 @@ just install
 
 `just --list` shows the other recipes.
 
-`just install` runs `uv sync`, which installs the dev group but **not** the optional
-`server` extra (`fastapi`, `uvicorn`, `mcp`, `pydantic`). Without it, the tests covering the
-REST API and the MCP endpoint do not run, at two different scopes:
+`just install` runs `uv sync --all-extras`, which installs the dev group and the optional
+`server` extra (`fastapi`, `uvicorn`, `mcp`, `pydantic`). The extra is what the tests covering
+the REST API and the MCP endpoint need, and a plain `uv sync` leaves it out. Those tests then
+do not run, at two different scopes:
 
 - `tests/test_server.py` calls `pytest.importorskip` at **module** scope, so none of its
   tests are collected and the module reports as a **single** skip, however many it hides.
 - `tests/test_prerelease_fixes.py` calls it **inside** individual tests, so those are
   collected and then skipped.
 
-So neither the collected total nor the skip count tells you what ran: the total omits the
-module-scope tests entirely, and one skip line stands for a whole module. Read the **passed**
-count, which is the only one that moves by the number of tests you gained, and `uv pip list`
-to see what is actually installed. For the whole suite:
-
-```bash
-uv sync --all-extras
-```
+So if you ever install without the extra, neither the collected total nor the skip count
+tells you what ran: the total omits the module-scope tests entirely, and one skip line stands
+for a whole module. Read the **passed** count, which is the only one that moves by the number
+of tests you gained, and `uv pip list` to see what is actually installed.
 
 Install the commit hooks once per clone with `uvx pre-commit install`. On every
 commit they run `ruff check`, `ruff format --check` and a few file checks
 (`uvx pre-commit run --all-files` runs them on everything). Type checks and
-tests are not in the hooks; run `just check` for those.
+tests are not in the hooks. Run `just check` for those.
 
 ## Running checks
 
@@ -58,7 +55,7 @@ python scripts/release_version.py check
 - Branch from `main` and keep each pull request to one change.
 - Add tests for new behaviour and fixed bugs.
 - Add a line under `## [Unreleased]` in `CHANGELOG.md` for user-visible changes.
-- Do not change the version number; the maintainers set it when releasing.
+- Do not change the version number. The maintainers set it when releasing.
 - CI must pass: lint, type check, tests on Python 3.12 to 3.14, and the wheel build.
 
 ## CLAUDE.md and AI agents
@@ -66,5 +63,5 @@ python scripts/release_version.py check
 `CLAUDE.md` is the maintained developer guide: commands, architecture,
 conventions and known gotchas. `AGENTS.md` points other coding agents to it.
 Read it before a larger change, and update it in the same pull request when your
-change makes part of it wrong. AI-assisted contributions are welcome; you are
+change makes part of it wrong. AI-assisted contributions are welcome. You are
 responsible for reviewing and testing what you submit.

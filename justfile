@@ -1,8 +1,8 @@
 default: lint format check test
 
-# Install dependencies
+# Install dependencies, including the optional extras the tests need
 install:
-    uv sync
+    uv sync --all-extras
 
 # Run linting checks
 lint:
