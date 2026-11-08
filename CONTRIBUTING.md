@@ -19,20 +19,18 @@ just install
 `just --list` shows the other recipes.
 
 `just install` runs `uv sync`, which installs the dev group but **not** the optional
-`server` extra. Two test modules reach for it at two different scopes, and each scope
-hides in a different number, so it takes both to see what a plain install leaves out:
+`server` extra (`fastapi`, `uvicorn`, `mcp`, `pydantic`). Without it, the tests covering the
+REST API and the MCP endpoint do not run, at two different scopes:
 
-| install | collected | result |
-|---|---|---|
-| `uv sync` | 344 | 342 passed, 3 skipped |
-| `uv sync --all-extras` | 363 | 363 passed |
+- `tests/test_server.py` calls `pytest.importorskip` at **module** scope, so none of its
+  tests are collected and the module reports as a **single** skip, however many it hides.
+- `tests/test_prerelease_fixes.py` calls it **inside** individual tests, so those are
+  collected and then skipped.
 
-`tests/test_server.py` calls `pytest.importorskip` at **module** scope, so its 19 tests are
-never collected at all and the whole module reports as one skip line. The two `fastapi`
-tests in `tests/test_prerelease_fixes.py` skip at **function** scope, so they are collected
-and then skipped. 21 tests are therefore blocked by a plain install - a number neither the
-collected totals (19) nor the skip count (3 lines) gives on its own, and a green 344 says
-nothing about the REST or MCP endpoints. For the whole suite:
+So neither the collected total nor the skip count tells you what ran: the total omits the
+module-scope tests entirely, and one skip line stands for a whole module. Read the **passed**
+count, which is the only one that moves by the number of tests you gained, and `uv pip list`
+to see what is actually installed. For the whole suite:
 
 ```bash
 uv sync --all-extras
