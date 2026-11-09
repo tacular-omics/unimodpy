@@ -90,3 +90,24 @@ def test_docstring_examples() -> None:
         failed += result.failed
     assert failed == 0, f"{failed} of {attempted} docstring examples failed"
     assert attempted >= MIN_EXAMPLES, f"only {attempted} examples ran, expected >= {MIN_EXAMPLES}"
+
+
+def test_server_gate_agrees_with_importing_the_subtree() -> None:
+    """Check the skip's verdict against importing the gated subtree, not against a count.
+
+    ``MIN_MODULES`` is the lean count, so a key that wrongly reads "absent" where the extra
+    is installed walks exactly those 10 modules, meets the floor, and skips the conditional
+    check in the test above: the five server modules' examples would stop running with no
+    assertion failing anywhere. A count a correct skip also produces cannot separate a
+    correct verdict from a stuck one; importing the subtree can.
+    """
+    try:
+        importlib.import_module(_SERVER_MODULES[0])
+    except ImportError as exc:
+        importable, why = False, f": {exc}"
+    else:
+        importable, why = True, ""
+    assert importable == _HAVE_SERVER_EXTRA, (
+        f"the skip says the server extra is {'present' if _HAVE_SERVER_EXTRA else 'absent'} but "
+        f"{_SERVER_MODULES[0]} is {'importable' if importable else 'not importable'}{why}"
+    )
