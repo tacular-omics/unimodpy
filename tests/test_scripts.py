@@ -10,13 +10,27 @@ import pytest
 _SCRIPTS = Path(__file__).parent.parent / "scripts"
 
 
-@pytest.mark.parametrize("name", ["print_entries", "audit_obo"])
+@pytest.mark.parametrize("name", ["print_entries", "audit_obo", "export_json"])
 def test_script_default_obo_path_exists(name: str) -> None:
     spec = importlib.util.spec_from_file_location(name, _SCRIPTS / f"{name}.py")
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     assert module.OBO_PATH.is_file()
+
+
+def test_export_json_writes_beside_repo(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    spec = importlib.util.spec_from_file_location("export_json", _SCRIPTS / "export_json.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    monkeypatch.chdir(tmp_path)
+    module.export()
+
+    assert not (tmp_path / "docs").exists()
+    assert module.OUT_PATH.is_file()
+    assert module.META_PATH.is_file()
 
 
 def _release_version():
