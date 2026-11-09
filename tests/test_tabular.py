@@ -1,9 +1,18 @@
 """Tests for the TSV/CSV tabular writer."""
 
 import csv
+import re
+from pathlib import Path
 
 from unimodpy import UnimodDatabase, write_tsv
 from unimodpy._tabular import _COLUMNS
+
+
+def test_readme_documents_export_columns_in_order() -> None:
+    readme = (Path(__file__).parent.parent / "README.md").read_text(encoding="utf-8")
+    section = readme.split("### TSV/CSV columns\n", 1)[1].split("</details>", 1)[0]
+    columns = re.findall(r"^\| `([^`]+)` \|", section, flags=re.MULTILINE)
+    assert tuple(columns) == _COLUMNS
 
 
 def _read(path, delimiter="\t"):

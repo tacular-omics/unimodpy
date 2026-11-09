@@ -94,6 +94,32 @@ db.write_obo("out/UNIMOD.obo")
 db2 = unimodpy.parse_obo("out/UNIMOD.obo")  # identical entry count and fields
 ```
 
+### TSV/CSV columns
+
+`write_tsv` writes one row per entry with the following columns, in this order.
+Missing values are empty cells. Multi-valued cells use `"; "` between values,
+independently of whether the file delimiter is a tab or comma.
+
+| Column | Contents |
+|---|---|
+| `id` | Accession in `UNIMOD:N` form. |
+| `name` | Modification name. |
+| `definition` | Modification definition. |
+| `synonyms` | Synonyms joined with `"; "`. |
+| `comment` | Free-text comment. |
+| `record_id` | Numeric UNIMOD record ID. |
+| `delta_mono_mass` | Monoisotopic mass difference in Da. |
+| `delta_avge_mass` | Average mass difference in Da. |
+| `delta_composition` | UNIMOD's elemental-composition string. |
+| `username_of_poster` | Submitter username. |
+| `group_of_poster` | Submitter group. |
+| `date_time_posted` | Submission timestamp as `YYYY-MM-DD HH:MM:SS`. |
+| `date_time_modified` | Last modification timestamp in the same format. |
+| `approved` | `1` if approved, `0` if not, or empty if unspecified. |
+| `is_a` | Parent accession in `UNIMOD:N` form. |
+| `specificities` | Every `site:position:classification` triple, including hidden ones, joined with `"; "`. |
+| `specificities_hidden` | One `1` (hidden) or `0` (visible) per specificity, in the same order, joined with `"; "`. |
+
 </details>
 
 <details>
