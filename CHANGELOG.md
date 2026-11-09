@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- The Pages JSON export writes both payload files to the repository's `docs/`
+  directory even when the script is launched from another working directory.
+
 ## [1.2.0] (2026-11-06)
 
 ### Added

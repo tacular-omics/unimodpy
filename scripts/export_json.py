@@ -8,7 +8,7 @@ from unimodpy.server.dashboard import dashboard_entries
 
 entries = dashboard_entries()
 
-out = Path("docs/data.json")
+out = Path(__file__).parent.parent / "docs" / "data.json"
 out.parent.mkdir(exist_ok=True)
 out.write_text(json.dumps(entries, separators=(",", ":")))
 print(f"Exported {len(entries)} entries → {out}")
