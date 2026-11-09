@@ -30,7 +30,24 @@ _SERVER_MODULES = (
     "unimodpy.server.references",
 )
 
-_HAVE_SERVER_EXTRA = importlib.util.find_spec("fastapi") is not None
+# server/app.py imports fastapi, mcp AND pydantic at module scope, so the subtree needs all
+# three present, not one chosen name: with fastapi installed and mcp absent, keying the skip
+# to fastapi alone lets the walk attempt the import and fail on "No module named 'mcp'". An
+# optional extra arrives with its whole dependency set, so the question is whether the extra
+# is installed. uvicorn is in the extra too but no module imports it, so it is deliberately
+# not in this predicate: its absence cannot stop the subtree importing.
+_SERVER_REQUIRES = ("fastapi", "mcp", "pydantic")
+
+
+def _installed(module: str) -> bool:
+    """Return True if ``module`` can be located, without importing it."""
+    try:
+        return importlib.util.find_spec(module) is not None
+    except ModuleNotFoundError:
+        return False
+
+
+_HAVE_SERVER_EXTRA = all(_installed(dep) for dep in _SERVER_REQUIRES)
 
 
 def _optional(name: str) -> bool:
