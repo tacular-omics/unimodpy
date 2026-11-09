@@ -100,14 +100,28 @@ def test_server_gate_agrees_with_importing_the_subtree() -> None:
     check in the test above: the five server modules' examples would stop running with no
     assertion failing anywhere. A count a correct skip also produces cannot separate a
     correct verdict from a stuck one; importing the subtree can.
+
+    Agreeing is not enough either. When the verdict is "absent" and the import does fail,
+    the name that was missing has to be one the key names: a server module that acquires an
+    import of some fourth root fails for a reason the key knows nothing about, the verdict
+    is "absent" for the right reason by accident, and the skip swallows a broken module as
+    an absent extra. That is mzmlpy's base-install defect with the verdict inverted - there
+    the gate said "present" so it came out loud, and here it would be silent.
     """
+    missing = ""
     try:
         importlib.import_module(_SERVER_MODULES[0])
     except ImportError as exc:
         importable, why = False, f": {exc}"
+        missing = (getattr(exc, "name", "") or "").split(".")[0]
     else:
         importable, why = True, ""
     assert importable == _HAVE_SERVER_EXTRA, (
         f"the skip says the server extra is {'present' if _HAVE_SERVER_EXTRA else 'absent'} but "
         f"{_SERVER_MODULES[0]} is {'importable' if importable else 'not importable'}{why}"
     )
+    if not importable:
+        assert missing in _SERVER_REQUIRES, (
+            f"{_SERVER_MODULES[0]} is missing {missing!r}, which the gate's key does not name, so this is a "
+            f"broken module and not an absent extra; the key names {_SERVER_REQUIRES}"
+        )
