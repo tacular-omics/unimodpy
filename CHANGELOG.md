@@ -4,6 +4,9 @@
 
 ### Fixed
 
+- `parse_obo` raises `UnimodParseError` (naming the file) when an OBO source contains
+  no `[Term]` block, and `download()` validates fetched bodies before replacing the
+  cache file so empty or HTML error responses never populate the cache.
 - The Pages JSON export writes both payload files to the repository's `docs/`
   directory even when the script is launched from another working directory.
 

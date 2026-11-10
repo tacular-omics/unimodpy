@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from unimodpy import UnimodDatabase, parse_obo
+from unimodpy import UnimodDatabase, UnimodParseError, download, parse_obo
 
 # ---------------------------------------------------------------------------
 # Parsing — entry count and root node
@@ -554,3 +554,38 @@ def test_get_missing_or_malformed_returns_default(db: UnimodDatabase, key: objec
 def test_get_by_id_non_int_or_str_returns_none(db: UnimodDatabase) -> None:
     assert db.get_by_id(1.0) is None  # ty: ignore[invalid-argument-type]
     assert db.get_by_id([1]) is None  # ty: ignore[invalid-argument-type]
+
+
+@pytest.mark.parametrize(
+    ("filename", "content"),
+    [
+        ("bad.obo", "<html><head><title>502 Bad Gateway</title></head><body>nginx</body></html>"),
+        ("empty.obo", ""),
+        ("whitespace.obo", "   \n\t\n"),
+        ("header_only.obo", "format-version: 1.4\nontology: unimod\n"),
+    ],
+)
+def test_parse_obo_rejects_sources_without_terms(tmp_path: Path, filename: str, content: str) -> None:
+    path = tmp_path / filename
+    path.write_text(content, encoding="utf-8")
+    with pytest.raises(UnimodParseError, match=filename):
+        parse_obo(path)
+
+
+def test_empty_database_constructs_directly() -> None:
+    empty_db = UnimodDatabase([])
+    assert len(empty_db) == 0
+
+
+def test_download_rejects_html_and_leaves_no_cache_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_retrieve(_url: str, target: str) -> None:
+        Path(target).write_text(
+            "<html><head><title>502 Bad Gateway</title></head><body>nginx</body></html>", encoding="utf-8"
+        )
+
+    monkeypatch.setattr("unimodpy._download.urllib.request.urlretrieve", fake_retrieve)
+    dest = tmp_path / "UNIMOD.obo"
+    with pytest.raises(UnimodParseError):
+        download(dest, force=True)
+    assert not dest.exists()
+    assert list(tmp_path.iterdir()) == []

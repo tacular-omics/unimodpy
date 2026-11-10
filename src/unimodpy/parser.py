@@ -224,8 +224,9 @@ def parse_obo(path: Path | str) -> UnimodDatabase:
     emit a ``UserWarning``.
 
     Raises:
-        UnimodParseError: a malformed value (bad id, number or date, incomplete
-            neutral loss). The message names the file, line and entry.
+        UnimodParseError: no ``[Term]`` block was found, or a malformed value
+            (bad id, number or date, incomplete neutral loss). The message
+            names the file, and for an entry, its line and entry.
         UnimodError: two entries share an id.
     """
     path = Path(path)
@@ -261,6 +262,9 @@ def parse_obo(path: Path | str) -> UnimodDatabase:
     # Flush final entry when file ends without a trailing blank line
     if in_term and current_lines:
         flush()
+
+    if not past_header:
+        raise UnimodParseError(f"{path.name}: no [Term] block found")
 
     while header_lines and header_lines[-1] == "":
         header_lines.pop()

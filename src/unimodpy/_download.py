@@ -28,11 +28,14 @@ def download(dest: Path | str | None = None, *, force: bool = False) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     import urllib.request
 
-    # Download next to dest, then rename: a failed download never leaves a truncated cache file.
+    from unimodpy.parser import parse_obo
+
+    # Download next to dest, validate before renaming so bad bodies never poison the cache.
     fd, tmp_name = tempfile.mkstemp(dir=dest.parent, prefix=f".{dest.name}.", suffix=".part")
     os.close(fd)
     try:
         urllib.request.urlretrieve(UNIMOD_OBO_URL, tmp_name)
+        parse_obo(tmp_name)
         os.replace(tmp_name, dest)
     finally:
         Path(tmp_name).unlink(missing_ok=True)
