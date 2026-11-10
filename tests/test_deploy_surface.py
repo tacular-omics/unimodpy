@@ -313,6 +313,24 @@ def test_no_rule_in_vercel_json_can_swallow_every_path() -> None:
             )
 
 
+def test_the_catch_all_translator_recognises_a_catch_all() -> None:
+    """The test above iterates over nothing on this tree, so the matcher is exercised here.
+
+    Measured 2026-11-09: vercel.json's keys are exactly `$schema`, `functions` and
+    `installCommand` - no rewrites, routes or redirects - so `source_matches_every_probe` is
+    never called and the test above would pass unchanged with a matcher that returned a
+    constant. That is the same vacuity this module exists to remove, one layer in: a loop over
+    an empty list proves nothing about what it would have done. Both shapes a Vercel catch-all
+    takes are asserted, against a rule that is not one, so the translator has a verdict before a
+    rule ever appears.
+    """
+    assert source_matches_every_probe("/(.*)"), "the translator does not recognise `/(.*)` as a catch-all"
+    assert source_matches_every_probe("/:path*"), "the translator does not recognise `/:path*` as a catch-all"
+    assert not source_matches_every_probe("/api/health"), (
+        "the translator calls `/api/health` a catch-all, so it would reject a legitimate rule"
+    )
+
+
 def test_every_include_files_glob_matches_files_that_exist() -> None:
     for glob, matched in delivered_files().items():
         assert matched, (
