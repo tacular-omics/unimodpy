@@ -3,11 +3,38 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import runpy
+import shutil
 from pathlib import Path
 
 import pytest
 
 _SCRIPTS = Path(__file__).parent.parent / "scripts"
+
+
+def test_export_json_writes_beside_script(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run a copy so the real checkout's generated files are never overwritten."""
+    repo = tmp_path / "repo"
+    scripts = repo / "scripts"
+    scripts.mkdir(parents=True)
+    script = scripts / "export_json.py"
+    shutil.copyfile(_SCRIPTS / script.name, script)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    runpy.run_path(str(script), run_name="__main__")
+
+    import unimodpy
+    from unimodpy.server.dashboard import dashboard_entries
+
+    assert json.loads((repo / "docs" / "data.json").read_text()) == dashboard_entries()
+    assert json.loads((repo / "docs" / "meta.json").read_text()) == {
+        "package": "unimodpy",
+        "version": unimodpy.__version__,
+    }
+    assert not (elsewhere / "docs").exists()
 
 
 @pytest.mark.parametrize("name", ["print_entries", "audit_obo"])
