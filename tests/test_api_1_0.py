@@ -213,22 +213,24 @@ def test_formula_conventions(db: UnimodDatabase) -> None:
 
 def test_download_force_semantics(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
+    fresh_body = _term(id=1, name="Fresh")
+    cached_body = _term(id=2, name="Cached")
 
     def fake_retrieve(url: str, dest) -> None:
         calls.append(url)
-        Path(dest).write_text("fresh", encoding="utf-8")
+        Path(dest).write_text(fresh_body, encoding="utf-8")
 
     monkeypatch.setattr("unimodpy._download.urllib.request.urlretrieve", fake_retrieve)
     dest = tmp_path / "sub" / "UNIMOD.obo"
     assert download(dest) == dest
     assert len(calls) == 1
-    dest.write_text("cached", encoding="utf-8")
+    dest.write_text(cached_body, encoding="utf-8")
     assert download(dest) == dest
     assert len(calls) == 1, "existing file must be reused without force"
-    assert dest.read_text() == "cached"
+    assert dest.read_text(encoding="utf-8") == cached_body
     download(dest, force=True)
     assert len(calls) == 2
-    assert dest.read_text() == "fresh"
+    assert dest.read_text(encoding="utf-8") == fresh_body
 
 
 def test_load_refresh_forces_download(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
