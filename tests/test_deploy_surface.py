@@ -30,6 +30,14 @@ is how this whole class of defect stays invisible.
 Form taken from uniprotptmpy's module of the same name, which has the same two files and the
 same hole: everything package-specific is in the constants below, and every other name is read
 out of ``vercel.json``, the pyproject or the source.
+
+Two tests here are not in that form, both because of something measured on this tree.
+``test_the_catch_all_translator_recognises_a_catch_all`` exists because this ``vercel.json``
+declares no rewrites, routes or redirects, so the catch-all loop iterates over nothing today and
+would pass with the matcher returning a constant. And
+``test_the_job_runs_without_what_the_deploy_does_not_install`` exists because the job's
+environment is the deploy's, so a dev-group import in ``tests/conftest.py`` would end the run at
+collection; this conftest has none, so that test skips until one appears.
 """
 
 from __future__ import annotations
@@ -438,6 +446,71 @@ def test_ci_runs_this_module_with_the_gate_set() -> None:
         f"the `{JOB}` job must fall back to {VERCEL_DEFAULT_INSTALL!r} when installCommand is "
         f"absent, because that is what Vercel itself does and what makes a deleted "
         f"installCommand fail here rather than pass"
+    )
+
+
+def conftest_import_roots() -> set[str]:
+    """Every root ``tests/conftest.py`` imports at module scope, read rather than assumed."""
+    conftest = ROOT / "tests" / "conftest.py"
+    assert conftest.is_file(), "tests/conftest.py does not exist, so this check cannot say what it needs"
+    return {dotted.split(".")[0] for dotted in module_scope_imports(conftest)}
+
+
+def conftest_foreign_roots() -> tuple[str, ...]:
+    """Those roots the installCommand environment would not have, beyond pytest itself.
+
+    pytest is excluded because the job installs it by name on top of installCommand's
+    environment: it is the runner, not part of the deploy. Anything else here would be a
+    dev-group package the deploy does not have, so importing conftest would error at collection
+    before a single assertion ran.
+    """
+    roots = conftest_import_roots()
+    return tuple(sorted(roots - sys.stdlib_module_names - {PACKAGE, "pytest", "__future__"}))
+
+
+def test_the_conftest_reader_sees_what_the_conftest_imports() -> None:
+    """The test below skips when it finds nothing, so a reader that finds nothing is silent.
+
+    Measured 2026-11-09: neutering ``conftest_import_roots`` to return an empty set, with
+    ``import hypothesis`` added to ``tests/conftest.py``, left
+    ``test_the_job_runs_without_what_the_deploy_does_not_install`` reporting 1 skipped at exit 0 -
+    a dead reader and a clean conftest are the same observation to it. This gives the reader a
+    verdict against what ``tests/conftest.py`` demonstrably does import, so the dead-reader case
+    fails here instead of passing there.
+    """
+    roots = conftest_import_roots()
+    assert {"pytest", PACKAGE} <= roots, (
+        f"tests/conftest.py imports pytest and {PACKAGE} at module scope, but the reader returned "
+        f"{sorted(roots)}, so it would call any conftest foreign-free and the check below would skip"
+    )
+
+
+def test_the_job_runs_without_what_the_deploy_does_not_install() -> None:
+    """The job's environment has to be the deploy's, which puts this package's conftest at risk.
+
+    Measured 2026-11-09 on this tree: ``tests/conftest.py`` imports ``pytest`` and ``unimodpy``
+    only, so it imports cleanly in an environment built from installCommand and this test skips.
+    It is here for the day someone adds a dev-group import to it. psimodpy's conftest imports
+    hypothesis at module scope, and in that environment the import is a collection error - exit 2,
+    nothing collected, no assertion in this module ever reached - which is the one failure shape
+    that reports nothing at all. Installing the missing package by name would be the wrong fix,
+    because it takes the job's environment away from the deploy's, and that environment is the
+    job's whole claim; ``--noconftest`` is the fix that keeps it. Measured in the real job
+    environment at a77a4ae: 11 collected, 11 passed with the conftest, identical with
+    ``--noconftest``, which is why the flag is deliberately not in the job today.
+    """
+    foreign = conftest_foreign_roots()
+    if not foreign:
+        pytest.skip("tests/conftest.py imports nothing the deploy environment lacks")
+    body = ci_job_body(JOB)
+    installed_by_name = all(
+        re.search(rf"uv pip install[^\n]*(?<![\w-]){re.escape(root)}(?![\w-])", body) for root in foreign
+    )
+    assert "--noconftest" in body or installed_by_name, (
+        f"tests/conftest.py imports {list(foreign)} at module scope and the deploy environment "
+        f"installs none of it, so the `{JOB}` job must pass --noconftest (or install each of those "
+        f"by name, which takes its environment away from the deploy's). Without either, the job "
+        f"exits 2 on a collection error having asserted nothing"
     )
 
 
