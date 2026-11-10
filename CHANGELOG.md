@@ -7,6 +7,11 @@
 - The Pages JSON export writes both payload files to the repository's `docs/`
   directory even when the script is launched from another working directory.
 
+### Documentation
+
+- Document all TSV/CSV export columns, including the aligned specificity flags,
+  and check their names and order against the writer in the test suite.
+
 ## [1.2.0] (2026-11-06)
 
 ### Added
