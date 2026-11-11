@@ -2,7 +2,7 @@
 
 Reports:
   - Top-level tags that are not id/name/def/synonym/comment/is_a/xref
-  - synonym: lines whose qualifier doesn't match the _SYN_RE pattern
+  - synonym: lines whose scope doesn't match the _SYN_RE pattern
   - xref: keys that are not scalar fields, spec_N_*, or spec_N_neutral_loss_M_*
   - xref: lines whose overall format doesn't match _XREF_RE
   - spec_N sub-fields that are not group/hidden/site/position/classification/misc_notes
@@ -18,8 +18,10 @@ from pathlib import Path
 
 OBO_PATH = Path(__file__).parent.parent / "src" / "unimodpy" / "data" / "UNIMOD.obo"
 
+# These mirror the regexes in unimodpy.parser so the audit reports exactly what the parser
+# would skip. Keep them in step with that module.
 _XREF_RE = re.compile(r'^xref:\s+(\S+)\s+"(.*)"$')
-_SYN_RE = re.compile(r'^synonym:\s+"(.*)"\s+\w+\s+\[\]$')
+_SYN_RE = re.compile(r'^synonym:\s+"(.*)"\s+(\w+)\s+\[\]$')
 _SPEC_RE = re.compile(r"^spec_(\d+)_(group|hidden|site|position|classification|misc_notes)$")
 _NL_RE = re.compile(r"^spec_(\d+)_neutral_loss_(\d+)_(mono_mass|avge_mass|flag|composition)$")
 _SPEC_PREFIX = re.compile(r"^spec_(\d+)_(.+)$")
