@@ -60,7 +60,8 @@ src/unimodpy/
   _download.py     download() from https://www.unimod.org/obo/unimod.obo to ~/.cache/unimodpy/
   _tabular.py      write_tsv (TSV/CSV, one row per entry, specificities joined with "; ",
                    their hidden flags in specificities_hidden in the same order)
-  _obo_writer.py   write_obo (round-trips: parse_obo(write_obo(db)) == db, header included)
+  _obo_writer.py   write_obo (round-trips: parse_obo(write_obo(db)) == db, header included;
+                   writes each synonym's recorded scope, RELATED when none is recorded)
   data/UNIMOD.obo  bundled database, shipped in the wheel
   server/
     __init__.py    re-exports app, mcp; docstring lists endpoints
@@ -115,7 +116,9 @@ From `unimodpy/__init__.py`:
 - Writing: `write_tsv(entries, path, *, delimiter="\t")`, `write_obo(entries, path, *, header_lines=())`
 - Database: `UnimodDatabase` (`get_by_id`, `get_by_name`, `search`, `db[...]`, `len`, iteration,
   `write_tsv`, `write_obo`, `header_lines`)
-- Models: `UnimodEntry`, `Specificity`, `NeutralLoss`
+- Models: `UnimodEntry`, `Specificity`, `NeutralLoss`. `UnimodEntry.synonym_scopes` is a
+  `tuple[str, ...]` of OBO synonym scopes paired by position with `synonyms`, kept as raw
+  tokens (every synonym line in the bundled file is `RELATED`), and defaults to `()`.
 - Enums: `Site` (23), `Position` (5), `Classification` (14); unknown upstream values stay raw `str` (warning)
 - Errors: `UnimodError`, `UnimodParseError(UnimodError, ValueError)`, `UnimodKeyError(UnimodError, KeyError)` (`errors.py`)
 - `__version__`
@@ -148,6 +151,9 @@ From `unimodpy/__init__.py`:
   relative to `app.py`. From an installed wheel neither exists and `/` returns 404.
 - `id` 0 is the UNIMOD root node: every xref-derived field is `None`. `/data.json`
   excludes it; `/api/entries` and `len(db)` include it.
+- `write_obo` writes the scope recorded in `synonym_scopes` for each synonym, and
+  `RELATED` for a synonym with no scope recorded, which is what an entry built in code
+  gets. It is not `EXACT`: no synonym line in the bundled file is `EXACT`.
 - `db[key]` tries the ID first, then the name. `get_by_id("Acetyl")` returns `None`.
 - `load(source, refresh=True)` raises `ValueError` (pass one or the other).
 - `NeutralLoss.composition` is UNIMOD's raw string. Zero-loss entries use `"0"`, which

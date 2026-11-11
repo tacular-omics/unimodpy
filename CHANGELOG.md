@@ -14,6 +14,9 @@
 
 ### Documentation
 
+- Describe `UnimodEntry.synonym_scopes` in the README API table and in `CLAUDE.md`,
+  including the `RELATED` fallback `write_obo` uses for a synonym with no scope
+  recorded.
 - Document all TSV/CSV export columns, including the aligned specificity flags,
   and check their names and order against the writer in the test suite.
 
