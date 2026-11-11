@@ -160,6 +160,10 @@ class UnimodEntry:
 
     ``definition_ref`` is the citation list from the ``def:`` line without the
     surrounding brackets (``"RESID:AA0048, PMID:11999733"``); ``""`` when absent.
+
+    ``synonym_scopes`` holds the OBO synonym scope token (e.g. ``"RELATED"`` or
+    ``"EXACT"``) paired by position with ``synonyms``; defaults to ``()`` for
+    entries constructed in code without recorded scopes.
     """
 
     id: int
@@ -179,6 +183,7 @@ class UnimodEntry:
     approved: bool | None = None
     is_a: int | None = None
     specificities: tuple[Specificity, ...] = ()
+    synonym_scopes: tuple[str, ...] = ()
 
     @property
     def accession(self) -> str:

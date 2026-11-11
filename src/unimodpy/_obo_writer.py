@@ -19,13 +19,23 @@ def _xref(key: str, value: str) -> str:
     return f'xref: {key} "{value}"\n'
 
 
+_DEFAULT_SYNONYM_SCOPE = "RELATED"
+
+
 def _write_entry(fh, entry: UnimodEntry, names: dict[int, str]) -> None:
+    """Write a single UNIMOD [Term] stanza.
+
+    Synonyms constructed in code without an entry in ``synonym_scopes`` fall
+    back to ``"RELATED"`` (matching all synonym lines in the bundled UNIMOD
+    database rather than assuming ``"EXACT"``).
+    """
     fh.write("[Term]\n")
     fh.write(f"id: UNIMOD:{entry.id}\n")
     fh.write(f"name: {entry.name}\n")
     fh.write(f'def: "{entry.definition}" [{entry.definition_ref}]\n')
-    for syn in entry.synonyms:
-        fh.write(f'synonym: "{syn}" EXACT []\n')
+    for idx, syn in enumerate(entry.synonyms):
+        scope = entry.synonym_scopes[idx] if idx < len(entry.synonym_scopes) else _DEFAULT_SYNONYM_SCOPE
+        fh.write(f'synonym: "{syn}" {scope} []\n')
     if entry.comment is not None:
         fh.write(f"comment: {entry.comment}\n")
     if entry.is_a is not None:
