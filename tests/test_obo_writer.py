@@ -1,6 +1,6 @@
 """Tests for the UNIMOD OBO round-trip writer."""
 
-from unimodpy import UnimodDatabase, parse_obo, write_obo
+from unimodpy import UnimodDatabase, UnimodEntry, parse_obo, write_obo
 
 
 def test_write_produces_file(db: UnimodDatabase, tmp_path) -> None:
@@ -54,8 +54,65 @@ def test_round_trip_synonyms(db: UnimodDatabase, tmp_path) -> None:
     out = tmp_path / "out.obo"
     write_obo(db, out, header_lines=db.header_lines)
     db2 = parse_obo(out)
-    e1, e2 = db[1], db2[1]
-    assert set(e1.synonyms) == set(e2.synonyms)
+    for mod_id in (1, 2):
+        e1, e2 = db[mod_id], db2[mod_id]
+        assert e1.synonyms == e2.synonyms
+        assert e1.synonym_scopes == e2.synonym_scopes
+
+
+def test_unimod_2_preserves_related_synonym_scope(db: UnimodDatabase, tmp_path) -> None:
+    assert db[2].synonym_scopes == ("RELATED",)
+    out = tmp_path / "out.obo"
+    write_obo(db, out, header_lines=db.header_lines)
+    content = out.read_text(encoding="utf-8")
+    assert 'synonym: "Top-Down sequencing c-type fragment ion" RELATED []' in content
+    assert 'synonym: "Top-Down sequencing c-type fragment ion" EXACT []' not in content
+
+
+def test_full_write_preserves_all_434_related_synonyms(db: UnimodDatabase, tmp_path) -> None:
+    out = tmp_path / "out.obo"
+    write_obo(db, out, header_lines=db.header_lines)
+    syn_lines = [line for line in out.read_text(encoding="utf-8").splitlines() if line.startswith("synonym:")]
+    assert len(syn_lines) == 434
+    assert all(line.endswith(" RELATED []") for line in syn_lines)
+    assert not any(" EXACT []" in line for line in syn_lines)
+
+
+def test_round_trip_preserves_mixed_synonym_scopes(tmp_path) -> None:
+    src = tmp_path / "in.obo"
+    src.write_text(
+        "[Term]\n"
+        "id: UNIMOD:1\n"
+        "name: Example\n"
+        'def: "Example." []\n'
+        'synonym: "syn exact" EXACT []\n'
+        'synonym: "syn related" RELATED []\n'
+        'synonym: "syn broad" BROAD []\n'
+        'synonym: "syn narrow" NARROW []\n\n',
+        encoding="utf-8",
+    )
+    db1 = parse_obo(src)
+    assert db1[1].synonym_scopes == ("EXACT", "RELATED", "BROAD", "NARROW")
+    out = tmp_path / "out.obo"
+    write_obo(db1, out)
+    db2 = parse_obo(out)
+    assert db2[1].synonyms == db1[1].synonyms
+    assert db2[1].synonym_scopes == ("EXACT", "RELATED", "BROAD", "NARROW")
+
+
+def test_code_built_entry_synonym_scope_fallback(tmp_path) -> None:
+    entry = UnimodEntry(
+        id=99,
+        name="Custom",
+        definition="Code-built entry.",
+        synonyms=("First", "Second"),
+        synonym_scopes=("EXACT",),
+    )
+    out = tmp_path / "out.obo"
+    write_obo(UnimodDatabase([entry]), out)
+    lines = out.read_text(encoding="utf-8").splitlines()
+    assert 'synonym: "First" EXACT []' in lines
+    assert 'synonym: "Second" RELATED []' in lines
 
 
 def test_round_trip_is_a(db: UnimodDatabase, tmp_path) -> None:

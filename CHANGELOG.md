@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- Preserve OBO synonym scopes (`synonym_scopes` on `UnimodEntry`) across parsing and `write_obo()` instead of hardcoding `EXACT`, defaulting code-built entries without recorded scopes to `RELATED`.
+
 - `parse_obo` raises `UnimodParseError` (naming the file) when an OBO source contains
   no `[Term]` block, and `download()` validates fetched bodies before replacing the
   cache file so empty or HTML error responses never populate the cache.

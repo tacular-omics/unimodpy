@@ -17,7 +17,7 @@ from unimodpy.models import Classification, NeutralLoss, Position, Site, Specifi
 # Module-level compiled regexes — avoids recompilation on every entry.
 _XREF_RE = re.compile(r'^xref:\s+(\S+)\s+"(.*)"$')
 _DEF_RE = re.compile(r'^def:\s+"(.*)"\s+\[([^\]]*)\]$')
-_SYN_RE = re.compile(r'^synonym:\s+"(.*)"\s+\w+\s+\[\]$')
+_SYN_RE = re.compile(r'^synonym:\s+"(.*)"\s+(\w+)\s+\[\]$')
 _SPEC_RE = re.compile(r"^spec_(\d+)_(group|hidden|site|position|classification|misc_notes)$")
 _NL_RE = re.compile(r"^spec_(\d+)_neutral_loss_(\d+)_(mono_mass|avge_mass|flag|composition)$")
 _IS_A_RE = re.compile(r"^is_a:\s+UNIMOD:(\d+)")
@@ -98,6 +98,7 @@ def _build_entry_inner(lines: list[str], where: str) -> UnimodEntry | None:
     name: str | None = None
     definition: str | None = None
     synonyms: list[str] = []
+    synonym_scopes: list[str] = []
     comment: str | None = None
     is_a: int | None = None
 
@@ -129,6 +130,7 @@ def _build_entry_inner(lines: list[str], where: str) -> UnimodEntry | None:
             m = _SYN_RE.match(line)
             if m:
                 synonyms.append(m.group(1))
+                synonym_scopes.append(m.group(2))
         elif line.startswith("comment:"):
             comment = line[8:].strip()
         elif line.startswith("is_a:"):
@@ -210,6 +212,7 @@ def _build_entry_inner(lines: list[str], where: str) -> UnimodEntry | None:
         approved=scalars["approved"] == "1" if "approved" in scalars else None,
         is_a=is_a,
         specificities=specificities,
+        synonym_scopes=tuple(synonym_scopes),
     )
 
 

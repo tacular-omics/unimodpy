@@ -309,6 +309,7 @@ def test_parse_obo_entry_with_all_fields(tmp_path: Path) -> None:
     assert e.id == 1
     assert e.name == "Acetyl"
     assert e.synonyms == ("AcK",)
+    assert e.synonym_scopes == ("RELATED",)
     assert e.comment == "A common modification"
     assert e.delta_mono_mass == pytest.approx(42.010565)
     assert e.approved is True
