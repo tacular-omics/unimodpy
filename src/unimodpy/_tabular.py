@@ -7,7 +7,7 @@ import datetime
 from collections.abc import Iterable
 from pathlib import Path
 
-from unimodpy.models import Specificity, UnimodEntry
+from unimodpy.models import NeutralLoss, Specificity, UnimodEntry
 
 _COLUMNS: tuple[str, ...] = (
     "id",
@@ -27,9 +27,16 @@ _COLUMNS: tuple[str, ...] = (
     "is_a",
     "specificities",
     "specificities_hidden",
+    "definition_ref",
+    "synonym_scopes",
+    "specificities_spec_num",
+    "specificities_group",
+    "specificities_misc_notes",
+    "specificities_neutral_losses",
 )
 
 _SUB_DELIM = "; "
+_LOSS_DELIM = "|"
 
 
 def _cell(value: object) -> str:
@@ -44,6 +51,19 @@ def _fmt_datetime(dt: datetime.datetime | None) -> str:
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _escape(text: str) -> str:
+    """Percent-escape ``%``, ``;`` and ``|`` so free text cannot be read as a sub-delimiter.
+
+    ``%`` is escaped first, so the escape is reversible (``%3B`` is ``;``, ``%7C`` is ``|``,
+    ``%25`` is ``%``). Text without those characters is unchanged.
+    """
+    return text.replace("%", "%25").replace(";", "%3B").replace("|", "%7C")
+
+
+def _fmt_neutral_loss(loss: NeutralLoss) -> str:
+    return f"{loss.key}:{loss.mono_mass}:{loss.avge_mass}:{'1' if loss.flag else '0'}:{_escape(loss.composition)}"
+
+
 def _fmt_spec(spec: Specificity) -> str:
     return f"{spec.site}:{spec.position}:{spec.classification}"
 
@@ -54,6 +74,15 @@ def to_row(entry: UnimodEntry) -> list[str]:
     ``specificities_hidden`` holds one ``1``/``0`` per entry of ``specificities``, in the
     same order: Unimod hides most specificities, and the flag is parsed, so dropping it
     from the export would leave a reader unable to tell which rows Unimod shows.
+
+    The six columns after it follow the same rule. ``specificities_spec_num``,
+    ``specificities_group``, ``specificities_misc_notes`` and ``specificities_neutral_losses``
+    hold one slot per entry of ``specificities``, in the same order, joined with ``"; "``; a
+    specificity without a value leaves its slot empty. A slot of ``specificities_neutral_losses``
+    holds that specificity's losses joined with ``"|"``, each as
+    ``key:mono_mass:avge_mass:flag:composition``. ``%``, ``;`` and ``|`` inside ``misc_notes`` and
+    ``composition`` are percent-escaped (see ``_escape``). ``definition_ref`` and ``synonym_scopes``
+    (paired with ``synonyms``) sit at entry level.
     """
     return [
         f"UNIMOD:{entry.id}",
@@ -73,6 +102,14 @@ def to_row(entry: UnimodEntry) -> list[str]:
         f"UNIMOD:{entry.is_a}" if entry.is_a is not None else "",
         _SUB_DELIM.join(_fmt_spec(s) for s in entry.specificities),
         _SUB_DELIM.join("1" if s.hidden else "0" for s in entry.specificities),
+        entry.definition_ref,
+        _SUB_DELIM.join(entry.synonym_scopes),
+        _SUB_DELIM.join(str(s.spec_num) for s in entry.specificities),
+        _SUB_DELIM.join(str(s.group) for s in entry.specificities),
+        _SUB_DELIM.join(_escape(s.misc_notes or "") for s in entry.specificities),
+        _SUB_DELIM.join(
+            _LOSS_DELIM.join(_fmt_neutral_loss(nl) for nl in s.neutral_losses) for s in entry.specificities
+        ),
     ]
 
 
@@ -86,7 +123,9 @@ def write_tsv(
 
     One row per entry. ``specificities`` joins each specificity as
     ``site:position:classification`` with ``"; "``, and ``specificities_hidden`` carries
-    their hidden flags as ``1``/``0`` in the same order.
+    their hidden flags as ``1``/``0`` in the same order. The remaining columns carry
+    ``definition_ref``, ``synonym_scopes``, and each specificity's number, group, misc notes and
+    neutral losses, index-aligned with ``specificities`` (see ``to_row`` for the cell format).
 
     Pass ``delimiter=","`` to emit CSV instead. Returns the resolved Path.
     """
