@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- `write_tsv` writes six more columns after the existing 17: `definition_ref`, `synonym_scopes`,
+  `specificities_spec_num`, `specificities_group`, `specificities_misc_notes` and
+  `specificities_neutral_losses`. The last four hold one slot per specificity, in the same order as
+  `specificities`, so the neutral losses, notes and group of each rule are no longer dropped from the
+  export. `%`, `;` and `|` inside notes and compositions are percent-escaped. The existing columns are unchanged.
+
 ### Fixed
 
 - The source distribution now carries `llms-full.txt`, which `tests/test_llms_full.py` reads,
