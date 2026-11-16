@@ -146,7 +146,7 @@ are exported.
 | `approved` | `bool \| None` | |
 | `is_a` | `int \| None` | parent ID: `0` for every term except the root, which has `None` |
 | `specificities` | `tuple[Specificity, ...]` | sorted by `spec_num`; includes hidden ones |
-| `synonym_scopes` | `tuple[str, ...]` | OBO scope token (e.g. `"EXACT"`, `"RELATED"`) of each entry of `synonyms`, by position; `()` for entries built in code without recorded scopes; `write_obo` writes it back |
+| `synonym_scopes` | `tuple[str, ...]` | the raw OBO scope token of each entry of `synonyms`, by position; all 434 synonym lines in the bundled file are `"RELATED"`; `()` for entries built in code without recorded scopes, which `write_obo` writes back as `RELATED` |
 
 Properties:
 
