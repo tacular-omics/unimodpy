@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- The source distribution now carries `llms-full.txt`, which `tests/test_llms_full.py` reads,
+  so the shipped test suite runs from an unpacked sdist instead of erroring on the missing file.
 - Preserve OBO synonym scopes (`synonym_scopes` on `UnimodEntry`) across parsing and `write_obo()` instead of hardcoding `EXACT`, defaulting code-built entries without recorded scopes to `RELATED`.
 
 - `parse_obo` raises `UnimodParseError` (naming the file) when an OBO source contains
@@ -14,6 +16,9 @@
 
 ### Documentation
 
+- `llms-full.txt` describes `synonym_scopes` with the scope the data actually uses: every
+  synonym line in the bundled file is `RELATED`, and `RELATED` is also what `write_obo` writes
+  for a synonym with no scope recorded.
 - Correct seven statements in `llms-full.txt` that no longer matched the code: the covered
   version (now `1.x`), the `/api/health` example version, the `specificities_hidden` column
   in the `write_tsv` list, the missing `synonym_scopes` row in the `UnimodEntry` table, the

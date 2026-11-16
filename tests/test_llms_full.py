@@ -2,6 +2,7 @@
 
 import dataclasses
 import re
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -61,3 +62,11 @@ def test_phospho_example_matches_database(guide: str) -> None:
         visible,
         len(phospho.specificities),
     )
+
+
+def test_guide_ships_in_the_sdist() -> None:
+    """This module reads GUIDE from the repository root, so the sdist must carry it."""
+    pyproject = tomllib.loads((GUIDE.parent / "pyproject.toml").read_text(encoding="utf-8"))
+    only_include = pyproject["tool"]["hatch"]["build"]["targets"]["sdist"]["only-include"]
+    assert GUIDE.name in only_include
+    assert "tests" in only_include
