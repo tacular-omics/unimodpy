@@ -4,7 +4,7 @@
 > mass-spectrometry modifications database, with the full database bundled for
 > offline use, plus an optional FastAPI REST + MCP server (hosted at unimod.tacular.dev).
 
-This is the complete usage guide for unimodpy 0.2.x, written for AI tools and people
+This is the complete usage guide for unimodpy 1.x, written for AI tools and people
 who use the package. Contributor notes live in CLAUDE.md in the repository.
 
 - Source: https://github.com/tacular-omics/unimodpy
@@ -91,7 +91,7 @@ are exported.
 : One row per entry. Columns: `id` (as `UNIMOD:N`), `name`, `definition`, `synonyms`,
   `comment`, `record_id`, `delta_mono_mass`, `delta_avge_mass`, `delta_composition`,
   `username_of_poster`, `group_of_poster`, `date_time_posted`, `date_time_modified`,
-  `approved`, `is_a`, `specificities`. Multi-valued cells are joined with `"; "`;
+  `approved`, `is_a`, `specificities`, `specificities_hidden` (one `1`/`0` per entry of `specificities`, same order). Multi-valued cells are joined with `"; "`;
   a specificity is written `site:position:classification`. `None` becomes an empty cell.
   Pass `delimiter=","` for CSV.
 
@@ -146,6 +146,7 @@ are exported.
 | `approved` | `bool \| None` | |
 | `is_a` | `int \| None` | parent ID: `0` for every term except the root, which has `None` |
 | `specificities` | `tuple[Specificity, ...]` | sorted by `spec_num`; includes hidden ones |
+| `synonym_scopes` | `tuple[str, ...]` | OBO scope token (e.g. `"EXACT"`, `"RELATED"`) of each entry of `synonyms`, by position; `()` for entries built in code without recorded scopes; `write_obo` writes it back |
 
 Properties:
 
@@ -220,12 +221,12 @@ from unimodpy import Classification, Position, Site
 phospho = db["Phospho"]
 spec = phospho.specificities[0]
 spec.site, spec.position, spec.classification
-# (<Site.S: 'S'>, <Position.ANYWHERE: 'Anywhere'>, <Classification.POST_TRANSLATIONAL: 'Post-translational'>)
+# (<Site.T: 'T'>, <Position.ANYWHERE: 'Anywhere'>, <Classification.POST_TRANSLATIONAL: 'Post-translational'>)
 
 nl = spec.neutral_losses[1]
 nl.key, nl.mono_mass, nl.proforma_formula      # (98, 97.976896, 'H3O4P')
 
-visible = [s for s in phospho.specificities if not s.hidden]   # 2 of 8
+visible = [s for s in phospho.specificities if not s.hidden]   # 3 of 9 visible
 ```
 
 ### Filtering
@@ -245,7 +246,7 @@ labels = [e for e in db
 # mass match within 1 mDa
 hits = [e.name for e in db
         if e.delta_mono_mass is not None and abs(e.delta_mono_mass - 15.994915) < 0.001]
-# ['Ala->Ser', 'Oxidation', 'Phe->Tyr']
+# ['Oxidation', 'Ala->Ser', 'Phe->Tyr']   (file order)
 ```
 
 ### Compositions and formulas
@@ -286,7 +287,7 @@ the bundled database once at import.
 
 | method + path | query params | returns |
 |---|---|---|
-| `GET /api/health` | | `{"ok": true, "package": "unimodpy", "version": "1.1.0", "count": 1561}` |
+| `GET /api/health` | | `{"ok": true, "package": "unimodpy", "version": "1.2.0", "count": 1561}` |
 | `GET /api/entries` | `limit` 1-500 (50), `offset` >= 0 (0), `include_hidden` (false) | `{total, limit, offset, items: [UnimodEntry]}`; starts with the root node id 0 |
 | `GET /api/entries/{id}` | `include_hidden` | `UnimodEntry`; `id` is `21` or `UNIMOD:21`; 404 `{"detail": "No entry for id='...'"}` |
 | `GET /api/entries/by-name/{name}` | `include_hidden` | `UnimodEntry`; exact, case-insensitive; 404 if missing |

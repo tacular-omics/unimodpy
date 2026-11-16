@@ -14,6 +14,12 @@
 
 ### Documentation
 
+- Correct seven statements in `llms-full.txt` that no longer matched the code: the covered
+  version (now `1.x`), the `/api/health` example version, the `specificities_hidden` column
+  in the `write_tsv` list, the missing `synonym_scopes` row in the `UnimodEntry` table, the
+  Phospho first-specificity site and visible count, and the file order of the 1 mDa example.
+  `tests/test_llms_full.py` now checks the version, export columns, entry fields and Phospho
+  example against the code.
 - Describe `UnimodEntry.synonym_scopes` in the README API table and in `CLAUDE.md`,
   including the `RELATED` fallback `write_obo` uses for a synonym with no scope
   recorded.
