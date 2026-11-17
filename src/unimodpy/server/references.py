@@ -9,18 +9,12 @@ have to.
 
 from __future__ import annotations
 
-import re
-
+from unimodpy._obo_escape import unescape_obo as _unescape
 from unimodpy.server.models import Reference
 
-# OBO escapes ``:`` as ``\:`` inside xref values.  We undo that so URLs are
-# usable strings.
-_OBO_ESCAPE = re.compile(r"\\([:,\s])")
+# OBO escapes ``:`` as ``\:`` inside xref values.  ``_obo_escape`` undoes that so URLs are
+# usable strings; ``search(include_references=True)`` uses the same rule.
 _URL_PREFIXES = ("URL", "UNIMODURL", "FindModURL", "MISCURL")
-
-
-def _unescape(s: str) -> str:
-    return _OBO_ESCAPE.sub(r"\1", s)
 
 
 def parse_definition_ref(raw: str | None) -> list[Reference]:

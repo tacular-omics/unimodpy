@@ -14,6 +14,7 @@ from unimodpy._mass import (
     MassIndex,
     Slot,
 )
+from unimodpy._obo_escape import unescape_obo
 from unimodpy.errors import UnimodError, UnimodKeyError
 from unimodpy.models import Position, Site, UnimodEntry
 
@@ -40,12 +41,16 @@ def _fields(entry: UnimodEntry, *, comment: bool = False, references: bool = Fal
     """Return the lowercased name, definition and synonyms of ``entry``: the fields search() looks in.
 
     ``comment`` and ``references`` append the comment and the definition references, after the others.
+
+    The references are appended with OBO's escapes removed, and in that spelling only. UNIMOD keeps
+    a citation URL as ``URL:http\\://www.unimod.org/...``, which is not how anyone would type it, so
+    the searchable text is ``URL:http://www.unimod.org/...``. One spelling per citation.
     """
     fields = [entry.name.lower(), entry.definition.lower(), *(s.lower() for s in entry.synonyms)]
     if comment and entry.comment:
         fields.append(entry.comment.lower())
     if references and entry.definition_ref:
-        fields.append(entry.definition_ref.lower())
+        fields.append(unescape_obo(entry.definition_ref).lower())
     return fields
 
 
@@ -123,6 +128,9 @@ class UnimodDatabase:
     ) -> list[UnimodEntry]:
         """Return all entries where query appears in name, definition, or any synonym.
 
+        With ``include_comment`` or ``include_references``, also in ``comment`` or in
+        ``definition_ref``.
+
         Comparison is case-insensitive substring matching. Results are in file order (not ranked).
         A non-``str`` query returns ``[]``.
 
@@ -130,7 +138,9 @@ class UnimodDatabase:
             query: the text to look for.
             include_comment: also search the entry's ``comment`` (default ``False``).
             include_references: also search ``definition_ref``, the citations of the definition
-                such as ``"RESID:AA0048, PMID:11999733"`` (default ``False``).
+                such as ``"RESID:AA0048, PMID:11999733"`` (default ``False``). The citations are
+                searched with OBO's escapes removed, so a URL is matched as ``http://...`` and not
+                as the ``http\\://...`` that OBO stores.
 
         With both flags off, only name, definition and synonyms are searched.
         """
