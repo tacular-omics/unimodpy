@@ -117,7 +117,7 @@ From `unimodpy/__init__.py`:
 - `entry.get_mass(*, monoisotopic=True)` (1.1) returns `delta_mono_mass`/`delta_avge_mass`; `search_mass` indexes `get_mass()`.
 - Loading: `load(source=None, *, refresh=False, cache=False)`, `parse_obo(path)`, `download(dest=None, *, force=False)`
 - Writing: `write_tsv(entries, path, *, delimiter="\t")`, `write_obo(entries, path, *, header_lines=())`
-- Database: `UnimodDatabase` (`get_by_id`, `get_by_name`, `search`, `db[...]`, `len`, iteration,
+- Database: `UnimodDatabase` (`get_by_id`, `get_by_name`, `search` (`include_comment`/`include_references` keywords, off by default), `db[...]`, `len`, iteration,
   `write_tsv`, `write_obo`, `header_lines`)
 - Models: `UnimodEntry`, `Specificity`, `NeutralLoss`. `UnimodEntry.synonym_scopes` is a
   `tuple[str, ...]` of OBO synonym scopes paired by position with `synonyms`, kept as raw
