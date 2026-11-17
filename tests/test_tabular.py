@@ -190,6 +190,20 @@ def _slots(cell: str) -> list[str]:
     return cell.split("; ") if cell else []
 
 
+_SLOT_COLUMNS = (
+    "specificities_hidden",
+    "specificities_spec_num",
+    "specificities_group",
+    "specificities_misc_notes",
+    "specificities_neutral_losses",
+)
+
+
+def _unescape(text: str) -> str:
+    """Reverse the writer's escape. ``%25`` goes last, so it cannot resurrect another escape."""
+    return text.replace("%3A", ":").replace("%7C", "|").replace("%3B", ";").replace("%25", "%")
+
+
 def test_export_carries_every_neutral_loss_and_misc_note(db: UnimodDatabase, tmp_path) -> None:
     """Counted from the TSV's own cells, against the parsed model (1713 losses, 228 notes in the bundled file)."""
     out = tmp_path / "out.tsv"
@@ -267,6 +281,84 @@ def test_free_text_cannot_collide_with_sub_delimiters(tmp_path) -> None:
     assert len(losses) == 3
     assert losses[0].split("|") == ["1:1.5:1.6:1:a%7Cb%3B c%25"] * 2
     assert losses[1] == losses[2] == ""
+
+
+def test_slot_columns_split_to_the_same_length_as_the_specificities_cell(db: UnimodDatabase, tmp_path) -> None:
+    """The README's promise, checked cell against cell for every entry rather than against the model.
+
+    An entry with no specificities leaves all six cells empty, and a bare ``split("; ")`` then
+    yields one empty slot rather than none. That is still the same length on both sides, which is
+    what a reader pairing the columns needs, and the README says so.
+    """
+    out = tmp_path / "out.tsv"
+    db.write_tsv(out)
+    widths: list[int] = []
+    empty_ids: list[str] = []
+    for row in _read_dict(out):
+        width = len(row["specificities"].split("; "))
+        widths.append(width)
+        for column in _SLOT_COLUMNS:
+            assert len(row[column].split("; ")) == width, (row["id"], column)
+        if not row["specificities"]:
+            empty_ids.append(row["id"])
+            assert width == 1
+            assert all(row[column] == "" for column in _SLOT_COLUMNS)
+    # Non-vacuity: the sweep must really have seen wide rows, and exactly one empty one.
+    assert len(widths) == len(db) == 1561
+    assert max(widths) == 20
+    assert sum(1 for width in widths if width > 1) == 686
+    assert empty_ids == ["UNIMOD:0"]
+
+
+def test_a_colon_in_a_composition_still_splits_into_five_fields(tmp_path) -> None:
+    """``:`` separates a loss item's five fields, so a composition carrying one is escaped.
+
+    No composition in the bundled database contains ``:``, so this is about future data: without
+    the escape a reader splitting on ``:`` would get six fields and misread the composition.
+    """
+    from unimodpy.models import NeutralLoss, Specificity, UnimodEntry
+
+    composition = "X:1 H(2) O"
+    loss = NeutralLoss(key=18, mono_mass=18.010565, avge_mass=18.0153, flag=False, composition=composition)
+    entry = UnimodEntry(
+        id=9998,
+        name="Y",
+        definition="d",
+        synonyms=(),
+        specificities=(Specificity(1, 1, False, "S", "Anywhere", "Other", None, (loss,)),),
+    )
+    out = tmp_path / "y.tsv"
+    write_tsv([entry], out)
+    item = _read_dict(out)[0]["specificities_neutral_losses"]
+    fields = item.split(":")
+    assert len(fields) == 5
+    assert fields[:4] == ["18", "18.010565", "18.0153", "0"]
+    assert fields[4] == "X%3A1 H(2) O"
+    assert _unescape(fields[4]) == composition
+
+
+def test_the_loss_escape_is_reversible(tmp_path) -> None:
+    """Round-trip the four escaped characters, plus text that already looks escaped."""
+    from unimodpy.models import NeutralLoss, Specificity, UnimodEntry
+
+    composition = "100% :;| and a literal %3A %7C"
+    loss = NeutralLoss(key=0, mono_mass=0.0, avge_mass=0.0, flag=True, composition=composition)
+    entry = UnimodEntry(
+        id=9997,
+        name="Z",
+        definition="d",
+        synonyms=(),
+        specificities=(Specificity(1, 1, False, "S", "Anywhere", "Other", "a; b|c:d 100%", (loss,)),),
+    )
+    out = tmp_path / "z.tsv"
+    write_tsv([entry], out)
+    row = _read_dict(out)[0]
+    field = row["specificities_neutral_losses"].split(":")
+    assert len(field) == 5
+    assert _unescape(field[4]) == composition
+    # misc_notes keeps its colons: it is a column of its own, not a ":"-delimited item.
+    assert row["specificities_misc_notes"] == "a%3B b%7Cc:d 100%25"
+    assert _unescape(row["specificities_misc_notes"]) == "a; b|c:d 100%"
 
 
 def test_hidden_flags_align_with_the_specificities_cell(db: UnimodDatabase, tmp_path) -> None:

@@ -8,7 +8,9 @@
   `specificities_spec_num`, `specificities_group`, `specificities_misc_notes` and
   `specificities_neutral_losses`. The last four hold one slot per specificity, in the same order as
   `specificities`, so the neutral losses, notes and group of each rule are no longer dropped from the
-  export. `%`, `;` and `|` inside notes and compositions are percent-escaped. The existing columns are unchanged.
+  export. `%`, `;` and `|` inside notes and compositions are percent-escaped, and a composition
+  escapes `:` as well, so a loss item always splits into exactly five fields. The existing
+  columns are unchanged.
 
 ### Fixed
 

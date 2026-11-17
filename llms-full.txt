@@ -95,7 +95,8 @@ are exported.
   `definition_ref`, `synonym_scopes`, `specificities_spec_num`, `specificities_group`,
   `specificities_misc_notes`, `specificities_neutral_losses` (the last four also one slot per
   specificity, same order; losses inside a slot are `|`-joined `key:mono:avge:flag:composition`;
-  `%`, `;`, `|` in notes and compositions are percent-escaped). Multi-valued cells are joined with `"; "`;
+  `%`, `;`, `|` in notes and compositions are percent-escaped, and `:` in a composition as `%3A`,
+  so a loss item always splits into exactly five fields). Multi-valued cells are joined with `"; "`;
   a specificity is written `site:position:classification`. `None` becomes an empty cell.
   Pass `delimiter=","` for CSV.
 

@@ -58,9 +58,11 @@ src/unimodpy/
   errors.py        UnimodError, UnimodParseError, UnimodKeyError(UnimodError, KeyError)
   _formula.py      delta_composition parsing (monosaccharide expansion, isotopes) + Hill formula
   _download.py     download() from https://www.unimod.org/obo/unimod.obo to ~/.cache/unimodpy/
-  _tabular.py      write_tsv (TSV/CSV, one row per entry, specificities joined with "; ",
-                   their hidden flags, spec numbers, groups, misc notes and neutral losses in
-                   index-aligned columns after the first 17; "%" ";" "|" escaped in notes/compositions)
+  _tabular.py      write_tsv (TSV/CSV, one row per entry, 23 columns: specificities joined with
+                   "; " and their hidden flags are columns 16-17; definition_ref and synonym_scopes
+                   are 18-19; spec numbers, groups, misc notes and neutral losses are 20-23, each
+                   index-aligned with specificities; "%" ";" "|" escaped in notes and compositions,
+                   and ":" too in a composition, which sits inside a ":"-delimited loss item)
   _obo_writer.py   write_obo (round-trips: parse_obo(write_obo(db)) == db, header included;
                    writes each synonym's recorded scope, RELATED when none is recorded)
   data/UNIMOD.obo  bundled database, shipped in the wheel
