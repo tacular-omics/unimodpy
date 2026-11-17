@@ -98,8 +98,11 @@ db2 = unimodpy.parse_obo("out/UNIMOD.obo")  # identical entry count and fields
 
 `write_tsv` writes one row per entry with the following columns, in this order.
 Missing values are empty cells. Multi-valued cells use `"; "` between values,
-independently of whether the file delimiter is a tab or comma. The last four columns
-have one slot per entry of `specificities`, so splitting each on `"; "` gives lists of equal length.
+independently of whether the file delimiter is a tab or comma. The last four columns, like
+`specificities_hidden`, hold one slot per entry of `specificities`: splitting any of them and
+`specificities` itself on `"; "` always gives lists of the same length. An entry with no
+specificities leaves all six of those cells empty, where that split gives a single empty slot
+rather than none; `UNIMOD:0`, the root node, is the only such entry in the bundled database.
 
 | Column | Contents |
 |---|---|
@@ -120,12 +123,12 @@ have one slot per entry of `specificities`, so splitting each on `"; "` gives li
 | `is_a` | Parent accession in `UNIMOD:N` form. |
 | `specificities` | Every `site:position:classification` triple, including hidden ones, joined with `"; "`. |
 | `specificities_hidden` | One `1` (hidden) or `0` (visible) per specificity, in the same order, joined with `"; "`. |
-| `definition_ref` | The citation list from the definition line, e.g. `RESID:AA0048, PMID:11999733`. |
+| `definition_ref` | The citation list from the definition line, exactly as OBO writes it, backslash escapes included: `PMID:10504701, UNIMODURL:http\://www.unimod.org/modifications_view.php?editid1=8`. |
 | `synonym_scopes` | OBO scope of each synonym, in the same order as `synonyms`, joined with `"; "`. |
 | `specificities_spec_num` | The UNIMOD specificity number of each specificity, in the same order, joined with `"; "`. |
 | `specificities_group` | The specificity group number of each specificity (not the submitter's `group_of_poster`), in the same order, joined with `"; "`. |
 | `specificities_misc_notes` | The free-text note of each specificity, in the same order, joined with `"; "`; an empty slot where there is none. `%`, `;` and `\|` in a note are escaped as `%25`, `%3B` and `%7C`. |
-| `specificities_neutral_losses` | The neutral losses of each specificity, in the same order, joined with `"; "`; an empty slot where there are none. Within a slot, losses are joined with `\|`, each as `key:mono_mass:avge_mass:flag:composition` (`flag` is `1` or `0`). The composition is UNIMOD's string, for example `H(3) O(4) P`, with `%`, `;` and `\|` escaped as above. |
+| `specificities_neutral_losses` | The neutral losses of each specificity, in the same order, joined with `"; "`; an empty slot where there are none. Within a slot, losses are joined with `\|`, each as `key:mono_mass:avge_mass:flag:composition` (`flag` is `1` or `0`). The composition is UNIMOD's string, for example `H(3) O(4) P`, with `%`, `;` and `\|` escaped as above and `:` escaped as `%3A`, so a loss always splits into exactly five fields. |
 
 </details>
 

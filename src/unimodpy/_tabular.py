@@ -60,8 +60,20 @@ def _escape(text: str) -> str:
     return text.replace("%", "%25").replace(";", "%3B").replace("|", "%7C")
 
 
+def _escape_in_loss(text: str) -> str:
+    """``_escape`` plus ``:`` as ``%3A``, for a field written inside a neutral-loss item.
+
+    ``:`` separates the five fields of a loss item, so a value carrying one would make the item
+    unsplittable. No composition in the bundled database contains ``:``, so this changes nothing
+    there; it keeps the five-field split true for any future data. Still reversible, because
+    ``_escape`` has already replaced every ``%``: a ``%3A`` in the output can only be a ``:``.
+    """
+    return _escape(text).replace(":", "%3A")
+
+
 def _fmt_neutral_loss(loss: NeutralLoss) -> str:
-    return f"{loss.key}:{loss.mono_mass}:{loss.avge_mass}:{'1' if loss.flag else '0'}:{_escape(loss.composition)}"
+    flag = "1" if loss.flag else "0"
+    return f"{loss.key}:{loss.mono_mass}:{loss.avge_mass}:{flag}:{_escape_in_loss(loss.composition)}"
 
 
 def _fmt_spec(spec: Specificity) -> str:
@@ -80,9 +92,11 @@ def to_row(entry: UnimodEntry) -> list[str]:
     hold one slot per entry of ``specificities``, in the same order, joined with ``"; "``; a
     specificity without a value leaves its slot empty. A slot of ``specificities_neutral_losses``
     holds that specificity's losses joined with ``"|"``, each as
-    ``key:mono_mass:avge_mass:flag:composition``. ``%``, ``;`` and ``|`` inside ``misc_notes`` and
-    ``composition`` are percent-escaped (see ``_escape``). ``definition_ref`` and ``synonym_scopes``
-    (paired with ``synonyms``) sit at entry level.
+    ``key:mono_mass:avge_mass:flag:composition``. ``%``, ``;`` and ``|`` inside ``misc_notes`` are
+    percent-escaped, and a ``composition`` escapes ``:`` as well, so a loss item always splits into
+    exactly five fields (see ``_escape`` and ``_escape_in_loss``). An entry with no specificities
+    leaves all six of those cells empty. ``definition_ref`` and ``synonym_scopes`` (paired with
+    ``synonyms``) sit at entry level.
     """
     return [
         f"UNIMOD:{entry.id}",
