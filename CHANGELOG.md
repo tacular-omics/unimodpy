@@ -16,13 +16,17 @@
   export. `%`, `;` and `|` inside notes and compositions are percent-escaped, and a composition
   escapes `:` as well, so a loss item always splits into exactly five fields. The existing
   columns are unchanged.
+- `UnimodEntry.synonym_scopes`, a `tuple[str, ...]` holding the OBO scope token of each entry of
+  `synonyms`, by position. Every synonym line in the bundled database is `RELATED`. It defaults to
+  `()` for an entry built in code with no recorded scopes.
 
 ### Fixed
 
 - The source distribution now carries `llms-full.txt`, which `tests/test_llms_full.py` reads,
   so the shipped test suite runs from an unpacked sdist instead of erroring on the missing file.
-- Preserve OBO synonym scopes (`synonym_scopes` on `UnimodEntry`) across parsing and `write_obo()` instead of hardcoding `EXACT`, defaulting code-built entries without recorded scopes to `RELATED`.
-
+- `write_obo` writes each synonym's recorded scope instead of hardcoding `EXACT`, so parsing a
+  database and writing it back no longer rewrites the scope of every synonym. A synonym with no
+  recorded scope is written as `RELATED`.
 - `parse_obo` raises `UnimodParseError` (naming the file) when an OBO source contains
   no `[Term]` block, and `download()` validates fetched bodies before replacing the
   cache file so empty or HTML error responses never populate the cache.
