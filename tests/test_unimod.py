@@ -224,6 +224,30 @@ def test_search_no_match(db: UnimodDatabase) -> None:
     assert db.search("xyzzy_no_match_ever") == []
 
 
+def test_search_include_comment(db: UnimodDatabase) -> None:
+    default = db.search("cyanogen")
+    assert len(default) == 2
+    wide = db.search("cyanogen", include_comment=True)
+    assert {10, 11} <= {e.id for e in wide}
+    # the default hits are kept, in file order
+    assert [e for e in wide if e in default] == default
+
+
+def test_search_include_references(db: UnimodDatabase) -> None:
+    assert db.search("AA0048") == []
+    assert db.search("PMID:11999733") == []
+    assert 1 in {e.id for e in db.search("AA0048", include_references=True)}
+    assert 1 in {e.id for e in db.search("pmid:11999733", include_references=True)}
+    # the flags are independent
+    assert db.search("AA0048", include_comment=True) == []
+
+
+def test_search_flags_keep_other_semantics(db: UnimodDatabase) -> None:
+    assert set(db.search("acetyl")) <= set(db.search("acetyl", include_comment=True, include_references=True))
+    assert len(db.search("", include_comment=True)) == len(db)
+    assert db.search(1, include_comment=True) == []  # type: ignore[arg-type]
+
+
 # ---------------------------------------------------------------------------
 # UnimodDatabase — iteration and length
 # ---------------------------------------------------------------------------
