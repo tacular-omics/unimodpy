@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `GET /api/entries/by-name/{name}` now accepts a name containing `/`, so `Ser/Thr-KDO` (UNIMOD:2022) and
+  `DiART6plex116/119` (UNIMOD:1394) can be fetched, with the slash plain or percent-encoded. They returned
+  a bare-text 404 before, because the route's `{name}` parameter never spans a `/`.
+
 ## [1.3.0] (2026-11-16)
 
 ### Added
