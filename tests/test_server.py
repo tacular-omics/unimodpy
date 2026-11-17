@@ -257,3 +257,28 @@ def test_server_import_parses_obo_once(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(unimodpy.parser, "parse_obo", counting_parse)
     importlib.reload(app_module)
     assert calls == 1
+
+
+@pytest.mark.parametrize(
+    ("path", "entry_id"),
+    [
+        ("Ser/Thr-KDO", 2022),
+        ("Ser%2FThr-KDO", 2022),
+        ("DiART6plex116/119", 1394),
+        ("DiART6plex116%2F119", 1394),
+        ("Phospho", 21),
+    ],
+)
+def test_rest_get_by_name_accepts_slash_in_name(path: str, entry_id: int) -> None:
+    with TestClient(app) as client:
+        r = client.get(f"/api/entries/by-name/{path}")
+        assert r.status_code == 200
+        assert r.json()["id"] == entry_id
+
+
+@pytest.mark.parametrize("path", ["NoSuchMod", "No/Such/Mod"])
+def test_rest_get_by_name_unknown_is_json_404(path: str) -> None:
+    with TestClient(app) as client:
+        r = client.get(f"/api/entries/by-name/{path}")
+        assert r.status_code == 404
+        assert "detail" in r.json()
