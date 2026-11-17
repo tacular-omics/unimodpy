@@ -14,6 +14,7 @@ from unimodpy._mass import (
     MassIndex,
     Slot,
 )
+from unimodpy._obo_escape import unescape_obo
 from unimodpy.errors import UnimodError, UnimodKeyError
 from unimodpy.models import Position, Site, UnimodEntry
 
@@ -40,12 +41,20 @@ def _fields(entry: UnimodEntry, *, comment: bool = False, references: bool = Fal
     """Return the lowercased name, definition and synonyms of ``entry``: the fields search() looks in.
 
     ``comment`` and ``references`` append the comment and the definition references, after the others.
+
+    The references are appended twice when OBO escaped anything in them: once as stored, and once
+    with the escapes removed. UNIMOD keeps a citation URL as ``URL:http\\://www.unimod.org/...``,
+    so without the second form a query spelled the way a reader would type it matches nothing.
     """
     fields = [entry.name.lower(), entry.definition.lower(), *(s.lower() for s in entry.synonyms)]
     if comment and entry.comment:
         fields.append(entry.comment.lower())
     if references and entry.definition_ref:
-        fields.append(entry.definition_ref.lower())
+        raw = entry.definition_ref.lower()
+        fields.append(raw)
+        unescaped = unescape_obo(raw)
+        if unescaped != raw:
+            fields.append(unescaped)
     return fields
 
 
@@ -123,6 +132,9 @@ class UnimodDatabase:
     ) -> list[UnimodEntry]:
         """Return all entries where query appears in name, definition, or any synonym.
 
+        With ``include_comment`` or ``include_references``, also in ``comment`` or in
+        ``definition_ref``.
+
         Comparison is case-insensitive substring matching. Results are in file order (not ranked).
         A non-``str`` query returns ``[]``.
 
@@ -130,7 +142,8 @@ class UnimodDatabase:
             query: the text to look for.
             include_comment: also search the entry's ``comment`` (default ``False``).
             include_references: also search ``definition_ref``, the citations of the definition
-                such as ``"RESID:AA0048, PMID:11999733"`` (default ``False``).
+                such as ``"RESID:AA0048, PMID:11999733"`` (default ``False``). A citation URL is
+                matched both as OBO stores it (``http\\://...``) and unescaped (``http://...``).
 
         With both flags off, only name, definition and synonyms are searched.
         """

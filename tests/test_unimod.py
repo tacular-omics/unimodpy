@@ -248,6 +248,38 @@ def test_search_flags_keep_other_semantics(db: UnimodDatabase) -> None:
     assert db.search(1, include_comment=True) == []  # type: ignore[arg-type]
 
 
+def test_unescape_obo_undoes_colon_comma_and_space() -> None:
+    """The one OBO-escape rule, shared by search() and the server's reference parser."""
+    from unimodpy._obo_escape import unescape_obo
+
+    assert unescape_obo("URL:http\\://x.org/a\\,b\\ c") == "URL:http://x.org/a,b c"
+    assert unescape_obo("RESID:AA0048, PMID:11999733") == "RESID:AA0048, PMID:11999733"
+
+
+def test_search_include_references_matches_both_url_spellings(db: UnimodDatabase) -> None:
+    """UNIMOD stores a citation URL as ``http\\://...``, so the readable spelling must find it too."""
+    escaped = db.search("http\\://www.unimod.org", include_references=True)
+    plain = db.search("http://www.unimod.org", include_references=True)
+    assert len(escaped) == 1560  # every entry but the root node cites its own UNIMOD page
+    assert plain == escaped
+    # It is still the flag that reaches them, not the default fields.
+    assert db.search("http://www.unimod.org") == []
+    assert db.search("http\\://www.unimod.org") == []
+
+
+def test_search_with_flags_does_not_match_across_fields(db: UnimodDatabase) -> None:
+    """The flags take a separate branch, so the no-match-across-fields rule needs its own check."""
+    entry = db.get_by_id(10)
+    assert entry is not None
+    spanning = entry.name.lower()[-3:] + entry.definition.lower()[:3]
+    # Non-vacuity: each half matches on its own, so an empty result is about the join.
+    assert db.search(spanning[:3], include_comment=True) != []
+    assert db.search(spanning[3:], include_comment=True) != []
+    assert db.search(spanning) == []
+    assert db.search(spanning, include_comment=True, include_references=True) == []
+    assert db.search("\x00", include_comment=True, include_references=True) == []
+
+
 # ---------------------------------------------------------------------------
 # UnimodDatabase — iteration and length
 # ---------------------------------------------------------------------------
