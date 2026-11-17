@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.3.0] (2026-11-16)
+
 ### Added
 
 - `search(query, *, include_comment=False, include_references=False)`: the new keywords also search an
