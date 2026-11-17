@@ -5,9 +5,10 @@
 ### Added
 
 - `search(query, *, include_comment=False, include_references=False)`: the new keywords also search an
-  entry's `comment` and its `definition_ref` citations (for example `AA0048`, `PMID:11999733`). A
-  citation URL matches both as OBO stores it (`http\://...`) and as a reader would type it
-  (`http://...`). The defaults keep the old behaviour, and the REST and MCP search are unchanged.
+  entry's `comment` and its `definition_ref` citations (for example `AA0048`, `PMID:11999733`). The
+  citations are searched with OBO's escapes removed, so a URL is matched as `http://...` rather than
+  as the `http\://...` that OBO stores. The defaults keep the old behaviour, and the REST and MCP
+  search are unchanged.
 - `write_tsv` writes six more columns after the existing 17: `definition_ref`, `synonym_scopes`,
   `specificities_spec_num`, `specificities_group`, `specificities_misc_notes` and
   `specificities_neutral_losses`. The last four hold one slot per specificity, in the same order as

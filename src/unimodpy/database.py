@@ -42,19 +42,15 @@ def _fields(entry: UnimodEntry, *, comment: bool = False, references: bool = Fal
 
     ``comment`` and ``references`` append the comment and the definition references, after the others.
 
-    The references are appended twice when OBO escaped anything in them: once as stored, and once
-    with the escapes removed. UNIMOD keeps a citation URL as ``URL:http\\://www.unimod.org/...``,
-    so without the second form a query spelled the way a reader would type it matches nothing.
+    The references are appended with OBO's escapes removed, and in that spelling only. UNIMOD keeps
+    a citation URL as ``URL:http\\://www.unimod.org/...``, which is not how anyone would type it, so
+    the searchable text is ``URL:http://www.unimod.org/...``. One spelling per citation.
     """
     fields = [entry.name.lower(), entry.definition.lower(), *(s.lower() for s in entry.synonyms)]
     if comment and entry.comment:
         fields.append(entry.comment.lower())
     if references and entry.definition_ref:
-        raw = entry.definition_ref.lower()
-        fields.append(raw)
-        unescaped = unescape_obo(raw)
-        if unescaped != raw:
-            fields.append(unescaped)
+        fields.append(unescape_obo(entry.definition_ref).lower())
     return fields
 
 
@@ -142,8 +138,9 @@ class UnimodDatabase:
             query: the text to look for.
             include_comment: also search the entry's ``comment`` (default ``False``).
             include_references: also search ``definition_ref``, the citations of the definition
-                such as ``"RESID:AA0048, PMID:11999733"`` (default ``False``). A citation URL is
-                matched both as OBO stores it (``http\\://...``) and unescaped (``http://...``).
+                such as ``"RESID:AA0048, PMID:11999733"`` (default ``False``). The citations are
+                searched with OBO's escapes removed, so a URL is matched as ``http://...`` and not
+                as the ``http\\://...`` that OBO stores.
 
         With both flags off, only name, definition and synonyms are searched.
         """

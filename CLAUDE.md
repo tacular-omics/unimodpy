@@ -58,8 +58,8 @@ src/unimodpy/
   errors.py        UnimodError, UnimodParseError, UnimodKeyError(UnimodError, KeyError)
   _formula.py      delta_composition parsing (monosaccharide expansion, isotopes) + Hill formula
   _obo_escape.py   unescape_obo(): undoes OBO's "\:" "\," "\ " escapes inside an xref value.
-                   The one copy of that rule; search(include_references=True) and
-                   server/references.py both use it
+                   The one copy of that rule; search(include_references=True) searches the
+                   unescaped citations only, and server/references.py uses it too
   _download.py     download() from https://www.unimod.org/obo/unimod.obo to ~/.cache/unimodpy/
   _tabular.py      write_tsv (TSV/CSV, one row per entry, 23 columns: specificities joined with
                    "; " and their hidden flags are columns 16-17; definition_ref and synonym_scopes

@@ -256,15 +256,16 @@ def test_unescape_obo_undoes_colon_comma_and_space() -> None:
     assert unescape_obo("RESID:AA0048, PMID:11999733") == "RESID:AA0048, PMID:11999733"
 
 
-def test_search_include_references_matches_both_url_spellings(db: UnimodDatabase) -> None:
-    """UNIMOD stores a citation URL as ``http\\://...``, so the readable spelling must find it too."""
-    escaped = db.search("http\\://www.unimod.org", include_references=True)
+def test_search_include_references_uses_the_unescaped_spelling_only(db: UnimodDatabase) -> None:
+    """One spelling per citation. OBO stores ``http\\://...``; the searchable text is ``http://...``."""
     plain = db.search("http://www.unimod.org", include_references=True)
-    assert len(escaped) == 1560  # every entry but the root node cites its own UNIMOD page
-    assert plain == escaped
+    assert len(plain) == 1560  # every entry but the root node cites its own UNIMOD page
+    # The stored spelling is not a second way in.
+    assert db.search("http\\://www.unimod.org", include_references=True) == []
     # It is still the flag that reaches them, not the default fields.
     assert db.search("http://www.unimod.org") == []
-    assert db.search("http\\://www.unimod.org") == []
+    # A citation that OBO never escaped is unaffected by the unescaping.
+    assert 1 in {e.id for e in db.search("resid:aa0048", include_references=True)}
 
 
 def test_search_with_flags_does_not_match_across_fields(db: UnimodDatabase) -> None:
