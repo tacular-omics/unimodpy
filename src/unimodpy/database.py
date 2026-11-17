@@ -36,9 +36,17 @@ def _slots(entry: UnimodEntry) -> tuple[Slot, ...]:
 _SEP = "\x00"
 
 
-def _fields(entry: UnimodEntry) -> list[str]:
-    """Return the lowercased name, definition and synonyms of ``entry``: the fields search() looks in."""
-    return [entry.name.lower(), entry.definition.lower(), *(s.lower() for s in entry.synonyms)]
+def _fields(entry: UnimodEntry, *, comment: bool = False, references: bool = False) -> list[str]:
+    """Return the lowercased name, definition and synonyms of ``entry``: the fields search() looks in.
+
+    ``comment`` and ``references`` append the comment and the definition references, after the others.
+    """
+    fields = [entry.name.lower(), entry.definition.lower(), *(s.lower() for s in entry.synonyms)]
+    if comment and entry.comment:
+        fields.append(entry.comment.lower())
+    if references and entry.definition_ref:
+        fields.append(entry.definition_ref.lower())
+    return fields
 
 
 def _haystack(entry: UnimodEntry) -> str:
@@ -110,14 +118,31 @@ class UnimodDatabase:
             return None
         return self._by_name_lower.get(name.lower())
 
-    def search(self, query: str) -> list[UnimodEntry]:
+    def search(
+        self, query: str, *, include_comment: bool = False, include_references: bool = False
+    ) -> list[UnimodEntry]:
         """Return all entries where query appears in name, definition, or any synonym.
 
-        Comparison is case-insensitive substring matching. A non-``str`` query returns ``[]``.
+        Comparison is case-insensitive substring matching. Results are in file order (not ranked).
+        A non-``str`` query returns ``[]``.
+
+        Args:
+            query: the text to look for.
+            include_comment: also search the entry's ``comment`` (default ``False``).
+            include_references: also search ``definition_ref``, the citations of the definition
+                such as ``"RESID:AA0048, PMID:11999733"`` (default ``False``).
+
+        With both flags off, only name, definition and synonyms are searched.
         """
         if not isinstance(query, str):
             return []
         q = query.lower()
+        if include_comment or include_references:
+            return [
+                e
+                for e in self._entries
+                if any(q in f for f in _fields(e, comment=include_comment, references=include_references))
+            ]
         if _SEP in q:
             # Rare: the query could span two joined fields, so test each field.
             return [e for e in self._entries if any(q in f for f in _fields(e))]
