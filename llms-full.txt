@@ -91,7 +91,11 @@ are exported.
 : One row per entry. Columns: `id` (as `UNIMOD:N`), `name`, `definition`, `synonyms`,
   `comment`, `record_id`, `delta_mono_mass`, `delta_avge_mass`, `delta_composition`,
   `username_of_poster`, `group_of_poster`, `date_time_posted`, `date_time_modified`,
-  `approved`, `is_a`, `specificities`, `specificities_hidden` (one `1`/`0` per entry of `specificities`, same order). Multi-valued cells are joined with `"; "`;
+  `approved`, `is_a`, `specificities`, `specificities_hidden` (one `1`/`0` per entry of `specificities`, same order),
+  `definition_ref`, `synonym_scopes`, `specificities_spec_num`, `specificities_group`,
+  `specificities_misc_notes`, `specificities_neutral_losses` (the last four also one slot per
+  specificity, same order; losses inside a slot are `|`-joined `key:mono:avge:flag:composition`;
+  `%`, `;`, `|` in notes and compositions are percent-escaped). Multi-valued cells are joined with `"; "`;
   a specificity is written `site:position:classification`. `None` becomes an empty cell.
   Pass `delimiter=","` for CSV.
 

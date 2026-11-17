@@ -152,12 +152,121 @@ def test_export_keeps_every_entry_and_specificity_including_hidden(db: UnimodDat
     assert exported == parsed
 
 
-def test_hidden_flag_column_is_last(db: UnimodDatabase, tmp_path) -> None:
+_FIRST_17 = (
+    "id name definition synonyms comment record_id delta_mono_mass delta_avge_mass delta_composition "
+    "username_of_poster group_of_poster date_time_posted date_time_modified approved is_a "
+    "specificities specificities_hidden"
+).split()
+
+
+def test_new_columns_are_appended_after_the_original_17(db: UnimodDatabase, tmp_path) -> None:
     """Appended, not inserted: a positional reader of the older export keeps its column numbers."""
-    assert _COLUMNS[-1] == "specificities_hidden"
+    assert _COLUMNS[:17] == tuple(_FIRST_17)
+    assert _COLUMNS[17:] == (
+        "definition_ref",
+        "synonym_scopes",
+        "specificities_spec_num",
+        "specificities_group",
+        "specificities_misc_notes",
+        "specificities_neutral_losses",
+    )
     out = tmp_path / "out.tsv"
     db.write_tsv(out)
-    assert _read(out)[0][-1] == "specificities_hidden"
+    assert _read(out)[0][:17] == _FIRST_17
+
+
+def test_original_columns_keep_their_contents(db: UnimodDatabase, tmp_path) -> None:
+    out = tmp_path / "out.tsv"
+    db.write_tsv(out)
+    rows = _read(out)[1:]
+    for row, entry in zip(rows, db, strict=True):
+        assert row[0] == f"UNIMOD:{entry.id}"
+        assert row[3] == "; ".join(entry.synonyms)
+        assert row[15] == "; ".join(f"{s.site}:{s.position}:{s.classification}" for s in entry.specificities)
+        assert row[16] == "; ".join("1" if s.hidden else "0" for s in entry.specificities)
+
+
+def _slots(cell: str) -> list[str]:
+    return cell.split("; ") if cell else []
+
+
+def test_export_carries_every_neutral_loss_and_misc_note(db: UnimodDatabase, tmp_path) -> None:
+    """Counted from the TSV's own cells, against the parsed model (1713 losses, 228 notes in the bundled file)."""
+    out = tmp_path / "out.tsv"
+    db.write_tsv(out)
+    rows = _read_dict(out)
+    losses = notes = 0
+    for row in rows:
+        for slot in _slots(row["specificities_neutral_losses"]):
+            losses += len(slot.split("|")) if slot else 0
+        notes += sum(1 for slot in _slots(row["specificities_misc_notes"]) if slot)
+    assert losses == sum(len(s.neutral_losses) for e in db for s in e.specificities) == 1713
+    assert notes == sum(1 for e in db for s in e.specificities if s.misc_notes) == 228
+
+
+def test_per_specificity_columns_align_with_the_specificities_cell(db: UnimodDatabase, tmp_path) -> None:
+    out = tmp_path / "out.tsv"
+    db.write_tsv(out)
+    for row, entry in zip(_read_dict(out), db, strict=True):
+        n = len(entry.specificities)
+        for column in (
+            "specificities_hidden",
+            "specificities_spec_num",
+            "specificities_group",
+            "specificities_misc_notes",
+            "specificities_neutral_losses",
+        ):
+            assert row[column].count("; ") == max(n - 1, 0), (row["id"], column)
+        assert _slots(row["specificities_spec_num"]) == [str(s.spec_num) for s in entry.specificities]
+        assert _slots(row["specificities_group"]) == [str(s.group) for s in entry.specificities]
+
+
+def test_entry_level_new_columns(db: UnimodDatabase, tmp_path) -> None:
+    out = tmp_path / "out.tsv"
+    db.write_tsv(out)
+    rows = _read_dict(out)
+    assert sum(1 for r in rows if r["definition_ref"]) == sum(1 for e in db if e.definition_ref) == 1561
+    assert sum(len(_slots(r["synonym_scopes"])) for r in rows) == sum(len(e.synonym_scopes) for e in db) == 434
+    assert [r["definition_ref"] for r in rows] == [e.definition_ref for e in db]
+
+
+def test_phospho_neutral_loss_is_readable(db: UnimodDatabase, tmp_path) -> None:
+    out = tmp_path / "out.tsv"
+    db.write_tsv(out)
+    row = next(r for r in _read_dict(out) if r["id"] == "UNIMOD:21")
+    entry = db.get_by_id(21)
+    assert entry is not None
+    specs = _slots(row["specificities"])
+    losses = _slots(row["specificities_neutral_losses"])
+    s_idx = next(i for i, spec in enumerate(specs) if spec.startswith("S:Anywhere"))
+    assert "97.976896" in losses[s_idx]
+    assert "H(3) O(4) P" in losses[s_idx]
+    assert len(set(_slots(row["specificities_group"]))) >= 1
+
+
+def test_free_text_cannot_collide_with_sub_delimiters(tmp_path) -> None:
+    from unimodpy.models import NeutralLoss, Specificity, UnimodEntry
+
+    def spec(num: int, notes: str | None, losses: tuple[NeutralLoss, ...]) -> Specificity:
+        return Specificity(num, 1, False, "S", "Anywhere", "Other", notes, losses)
+
+    loss = NeutralLoss(key=1, mono_mass=1.5, avge_mass=1.6, flag=True, composition="a|b; c%")
+    entry = UnimodEntry(
+        id=9999,
+        name="X",
+        definition="d",
+        synonyms=(),
+        specificities=(spec(1, "a; b|c 100%", (loss, loss)), spec(2, None, ()), spec(3, "plain", ())),
+    )
+    out = tmp_path / "x.tsv"
+    write_tsv([entry], out)
+    row = _read_dict(out)[0]
+    notes = _slots(row["specificities_misc_notes"])
+    assert notes == ["a%3B b%7Cc 100%25", "", "plain"]
+    losses = _slots(row["specificities_neutral_losses"])
+    assert len(losses) == 3
+    assert losses[0].split("|") == ["1:1.5:1.6:1:a%7Cb%3B c%25"] * 2
+    assert losses[1] == losses[2] == ""
 
 
 def test_hidden_flags_align_with_the_specificities_cell(db: UnimodDatabase, tmp_path) -> None:
