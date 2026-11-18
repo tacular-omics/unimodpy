@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- The OBO unescaping used by `search(include_references=True)` and by the server's
+  `parse_definition_ref` now decodes every row of the OBO 1.4 escape table, not three of them. It
+  previously handled `\:`, `\,` and a backslash before any whitespace, and left `\n`, `\t`,
+  `\W`, `\"`, `\\` and the six bracket, parenthesis and brace rows alone. **No citation in the
+  bundled database changes**: its only backslash sequences are `\:` (2209, decoded the same way
+  before and after), `\'` (14) and `\"` (2), and the last two do not occur in a `definition_ref`.
+  Three differences are visible to anyone passing other OBO text through those two entry points: a
+  backslash before a space is no longer decoded (the table spells a single space `\W`, which is now
+  decoded), a backslash before a newline yields nothing rather than a newline, and `\\` yields one
+  backslash. A sequence the table does not define, such as `\'`, keeps its backslash: the 1.4
+  section permits supporting only its own table, and that is the option taken.
+
 ## [1.3.0] (2026-11-16)
 
 ### Added
