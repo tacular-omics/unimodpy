@@ -248,11 +248,75 @@ def test_search_flags_keep_other_semantics(db: UnimodDatabase) -> None:
     assert db.search(1, include_comment=True) == []  # type: ignore[arg-type]
 
 
-def test_unescape_obo_undoes_colon_comma_and_space() -> None:
-    """The one OBO-escape rule, shared by search() and the server's reference parser."""
+# OUTSIDE-SOURCED. Every row of the escape table printed in OBO Flat File Format 1.4,
+# section "Escape characters", read 2026-11-17 from
+# https://owlcollab.github.io/oboformat/doc/GO.format.obo-1_4.html
+# transcribed as (sequence, the literal the table gives, the table's wording). The table's
+# "@ -> at (language tag)" row is not a backslash sequence, so it is not an unescaping rule
+# and is not listed here.
+_OBO_1_4_ESCAPE_TABLE = (
+    ("\\n", "\n", "newline"),
+    ("\\W", " ", "single space"),
+    ("\\t", "\t", "tab"),
+    ("\\:", ":", "colon"),
+    ("\\,", ",", "comma"),
+    ('\\"', '"', "double quote"),
+    ("\\\\", "\\", "backslash"),
+    ("\\(", "(", "open parenthesis"),
+    ("\\)", ")", "close parenthesis"),
+    ("\\[", "[", "open bracket"),
+    ("\\]", "]", "close bracket"),
+    ("\\{", "{", "open brace"),
+    ("\\}", "}", "close brace"),
+    ("\\\n", "", "\\<newline> -> <no value>"),
+)
+
+
+def test_unescape_obo_decodes_every_row_of_the_obo_1_4_escape_table() -> None:
+    """OUTSIDE-SOURCED: the expected literals are the ones printed in the 1.4 table above."""
     from unimodpy._obo_escape import unescape_obo
 
-    assert unescape_obo("URL:http\\://x.org/a\\,b\\ c") == "URL:http://x.org/a,b c"
+    assert len(_OBO_1_4_ESCAPE_TABLE) == 14
+    for sequence, literal, wording in _OBO_1_4_ESCAPE_TABLE:
+        assert unescape_obo(f"a{sequence}b") == f"a{literal}b", wording
+
+
+def test_unescape_obo_leaves_a_sequence_the_1_4_table_does_not_define() -> None:
+    """OUTSIDE-SOURCED: that section offers two options and this package takes the first.
+
+    "OBO parser implementations may support only these escape characters, or they may
+    assume that any character following a backslash is an escaped character. Parsers that
+    choose the latter approach will translate \\a and \\? to "a" and "?" respectively."
+    Supporting only the table means a sequence outside it keeps its backslash.
+    """
+    from unimodpy._obo_escape import unescape_obo
+
+    assert unescape_obo("Schiff\\'s") == "Schiff\\'s"
+    assert unescape_obo("a\\?b") == "a\\?b"
+    assert unescape_obo("a\\ b") == "a\\ b"
+
+
+def test_unescape_obo_decodes_in_one_left_to_right_pass() -> None:
+    """An escaped backslash is not reconsidered, so ``\\\\:`` is a backslash then a colon."""
+    from unimodpy._obo_escape import unescape_obo
+
+    assert unescape_obo("a\\\\:b") == "a\\:b"
+    assert unescape_obo("a\\\\nb") == "a\\nb"
+
+
+def test_unescape_obo_on_the_vendor_file_s_own_escaped_text(db: UnimodDatabase) -> None:
+    """Input is the bundled UNIMOD.obo's own bytes; the expected value is the table's `\\"` row."""
+    from unimodpy._obo_escape import unescape_obo
+
+    escaped = [e for e in db if e.comment and '\\"' in e.comment]
+    assert len(escaped) == 1
+    assert '\\"native\\"' in escaped[0].comment
+    assert '"native"' in unescape_obo(escaped[0].comment)
+
+
+def test_unescape_obo_leaves_text_with_no_escapes_alone() -> None:
+    from unimodpy._obo_escape import unescape_obo
+
     assert unescape_obo("RESID:AA0048, PMID:11999733") == "RESID:AA0048, PMID:11999733"
 
 
