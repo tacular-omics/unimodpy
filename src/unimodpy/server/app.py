@@ -175,7 +175,7 @@ def get_entry(id: str, include_hidden: bool = Query(False)) -> UnimodEntry:
     return to_unimod_entry(entry, include_hidden=include_hidden)
 
 
-@app.get("/api/entries/by-name/{name}", response_model=UnimodEntry)
+@app.get("/api/entries/by-name/{name:path}", response_model=UnimodEntry)
 def get_entry_by_name(name: str, include_hidden: bool = Query(False)) -> UnimodEntry:
     entry = _db.get_by_name(name)
     if entry is None:

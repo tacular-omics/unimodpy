@@ -295,7 +295,7 @@ the bundled database once at import.
 | `GET /api/health` | | `{"ok": true, "package": "unimodpy", "version": "1.3.0", "count": 1561}` |
 | `GET /api/entries` | `limit` 1-500 (50), `offset` >= 0 (0), `include_hidden` (false) | `{total, limit, offset, items: [UnimodEntry]}`; starts with the root node id 0 |
 | `GET /api/entries/{id}` | `include_hidden` | `UnimodEntry`; `id` is `21` or `UNIMOD:21`; 404 `{"detail": "No entry for id='...'"}` |
-| `GET /api/entries/by-name/{name}` | `include_hidden` | `UnimodEntry`; exact, case-insensitive; 404 if missing |
+| `GET /api/entries/by-name/{name}` | `include_hidden` | `UnimodEntry`; exact, case-insensitive; the name may contain `/`; 404 if missing |
 | `GET /api/search` | `q` (required, min length 1), `limit` 1-500 (50) | `{query, total, limit, items: [UnimodSummary]}` |
 | `GET /` | | browser dashboard HTML (404 when `docs/index.html` is not on disk, e.g. a pip install) |
 | `GET /data.json` | | dashboard payload: list of 1,560 entries (root node excluded) |
