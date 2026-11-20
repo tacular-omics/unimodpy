@@ -282,3 +282,84 @@ def test_rest_get_by_name_unknown_is_json_404(path: str) -> None:
         r = client.get(f"/api/entries/by-name/{path}")
         assert r.status_code == 404
         assert "detail" in r.json()
+
+
+# ---------------------------------------------------------------------------
+# Unknown query parameters
+# ---------------------------------------------------------------------------
+
+
+# (request path, the accepted names the 422 should list for that route)
+_API_ROUTE_ACCEPTS = (
+    ("/api/health", "no query parameters"),
+    ("/api/entries", "include_hidden, limit, offset"),
+    ("/api/entries/21", "include_hidden"),
+    ("/api/entries/by-name/Acetyl", "include_hidden"),
+    ("/api/search?q=acetyl", "limit, q"),
+)
+
+
+@pytest.mark.parametrize(("path", "accepted"), _API_ROUTE_ACCEPTS)
+def test_api_route_rejects_an_unknown_query_parameter(path: str, accepted: str) -> None:
+    """Every /api/* route, so a route added later without a test is still covered by the sweep."""
+    separator = "&" if "?" in path else "?"
+    r = TestClient(app).get(f"{path}{separator}bogus=1")
+    assert r.status_code == 422
+    detail = r.json()["detail"]
+    assert "'bogus'" in detail, detail
+    assert f"accepts: {accepted}" in detail, detail
+
+
+def test_the_422_names_every_unknown_parameter_at_once() -> None:
+    r = TestClient(app).get("/api/entries?bogus=1&alsobogus=2&limit=5")
+    assert r.status_code == 422
+    detail = r.json()["detail"]
+    assert "unknown query parameters" in detail
+    assert "'alsobogus', 'bogus'" in detail, detail
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/health",
+        "/api/entries?limit=2&offset=1&include_hidden=true",
+        "/api/entries/21?include_hidden=true",
+        "/api/entries/by-name/Acetyl",
+        "/api/search?q=acetyl&limit=3",
+    ],
+)
+def test_api_route_still_accepts_its_declared_query_parameters(path: str) -> None:
+    assert TestClient(app).get(path).status_code == 200
+
+
+def test_misspelled_include_hidden_is_rejected_rather_than_ignored() -> None:
+    """The defect this closes: the typo returned the default body, 200, and no hint."""
+    client = TestClient(app)
+    correct = client.get("/api/entries?limit=5&include_hidden=true")
+    typo = client.get("/api/entries?limit=5&include_hiden=true")
+    assert correct.status_code == 200
+    assert typo.status_code == 422
+    detail = typo.json()["detail"]
+    assert "'include_hiden'" in detail
+    assert "include_hidden" in detail
+
+
+@pytest.mark.parametrize("path", ["/?utm_source=newsletter", "/data.json?utm_source=newsletter"])
+def test_dashboard_paths_stay_exempt(path: str) -> None:
+    """A shared browser link may carry a tracking parameter; the page must not 422 over it.
+
+    Compared against the same path without the parameter rather than against a fixed status, so
+    this holds whether or not ``docs/index.html`` is bundled alongside the install.
+    """
+    client = TestClient(app)
+    bare = path.split("?", 1)[0]
+    assert client.get(path).status_code == client.get(bare).status_code
+    assert client.get(path).status_code != 422
+
+
+def test_the_mounted_mcp_app_is_unaffected(mcp_client: TestClient) -> None:
+    """App dependencies do not run for a mounted sub-application, and must not start now."""
+    payload = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": _INIT_PARAMS}
+    r = mcp_client.post("/mcp?bogus=1", json=payload, headers=_MCP_HEADERS)
+    assert r.status_code == 200, r.text
+    assert _parse_sse(r.text)["result"]["serverInfo"]["name"] == "unimodpy"
