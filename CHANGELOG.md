@@ -4,6 +4,12 @@
 
 ### Fixed
 
+- Every `/api/*` route answers an unknown query parameter with HTTP 422 naming it and listing the
+  names that route accepts, instead of returning 200 and ignoring it. A misspelling such as
+  `/api/entries?include_hiden=true` used to return the default body with no hint that the name had
+  not been read. `/` and `/data.json` stay exempt, because a shared browser link may carry a
+  tracking parameter and the page should still open. The MCP endpoint is unchanged: app
+  dependencies do not run for a mounted sub-application.
 - `GET /api/entries/by-name/{name}` now accepts a name containing `/`, so `Ser/Thr-KDO` (UNIMOD:2022) and
   `DiART6plex116/119` (UNIMOD:1394) can be fetched, with the slash plain or percent-encoded. They returned
   a bare-text 404 before, because the route's `{name}` parameter never spans a `/`.
